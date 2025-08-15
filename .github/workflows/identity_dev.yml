@@ -39,7 +39,7 @@ jobs:
         run: |
           docker build -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.tag }} \
                        -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:live \
-                       -f src/IdentityService/IdentityService.Api/Dockerfile src/IdentityService/IdentityService.Api
+                       -f src/IdentityService/IdentityService.Api/Dockerfile .
 
       - name: Push Both Docker Image Tags to Docker Hub
         run: |
