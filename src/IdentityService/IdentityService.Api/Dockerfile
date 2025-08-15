@@ -11,7 +11,7 @@ EXPOSE 8081
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
+WORKDIR /app
 COPY ["src/IdentityService/IdentityService.Api/IdentityService.Api.csproj", "src/IdentityService/IdentityService.Api/"]
 COPY ["src/IdentityService/IdentityService.Application/IdentityService.Application.csproj", "src/IdentityService/IdentityService.Application/"]
 COPY ["src/IdentityService/IdentityService.Contracts/IdentityService.Contracts.csproj", "src/IdentityService/IdentityService.Contracts/"]
@@ -19,7 +19,7 @@ COPY ["src/IdentityService/IdentityService.Domain/IdentityService.Domain.csproj"
 COPY ["src/IdentityService/IdentityService.Infrastructure/IdentityService.Infrastructure.csproj", "src/IdentityService/IdentityService.Infrastructure/"]
 RUN dotnet restore "./src/IdentityService/IdentityService.Api/IdentityService.Api.csproj"
 COPY . .
-WORKDIR "/src/src/IdentityService/IdentityService.Api"
+WORKDIR "/app/src/IdentityService/IdentityService.Api"
 RUN dotnet build "./IdentityService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
