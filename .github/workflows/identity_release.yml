@@ -70,7 +70,7 @@ jobs:
             --build-arg BUILD_CONFIGURATION=Release \
             -t ${{ secrets.PROD_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.tag }} \
             -t ${{ secrets.PROD_HUB_USERNAME }}/kwik-nesta-identity:live \
-            -f src/IdentityService/Dockerfile src/IdentityService
+            -f src/IdentityService/IdentityService.Api/Dockerfile src/IdentityService/IdentityService.Api
 
       - name: Push Docker Images to Docker Hub
         run: |
