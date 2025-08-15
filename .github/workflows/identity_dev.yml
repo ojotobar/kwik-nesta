@@ -1,4 +1,4 @@
-name: Build And Push Kwik Nesta Docker Image To Docker Hub
+name: Build And Push Kwik Nesta Identity Docker Image To Docker Hub
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
       - name: Get latest tag from Docker Hub
         id: get_latest_tag
         run: |
-          tags=$(curl -s https://hub.docker.com/v2/repositories/${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta/tags?page_size=100 | jq -r '.results[].name')
+          tags=$(curl -s https://hub.docker.com/v2/repositories/${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity/tags?page_size=100 | jq -r '.results[].name')
           echo "All tags: $tags"
           
           latest_version=$(echo "$tags" | grep -E '^v[0-9]+$' | sort -V | tail -n 1)
@@ -37,12 +37,12 @@ jobs:
 
       - name: Build Docker Image with version and live tags
         run: |
-          docker build -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta:${{ steps.get_latest_tag.outputs.tag }} \
-                       -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta:live \
-                       -f ProfessionalProfiles/Dockerfile .
+          docker build -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.tag }} \
+                       -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:live \
+                       -f src/IdentityService/Dockerfile src/IdentityService
 
       - name: Push Both Docker Image Tags to Docker Hub
         run: |
           docker login -u ${{ secrets.DEV_HUB_USERNAME }} -p ${{ secrets.DEV_HUB_SECRET }}
-          docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta:${{ steps.get_latest_tag.outputs.tag }}
-          docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta:live
+          docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.tag }}
+          docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:live
