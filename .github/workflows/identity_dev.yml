@@ -18,31 +18,39 @@ jobs:
       - name: Get latest tag from Docker Hub
         id: get_latest_tag
         run: |
-          tags=$(curl -s https://hub.docker.com/v2/repositories/${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity/tags?page_size=100 | jq -r '.results[].name')
-          echo "All tags: $tags"
-          
-          latest_version=$(echo "$tags" | grep -E '^v[0-9]+$' | sort -V | tail -n 1)
-          echo "Latest version: $latest_version"
+          echo "Fetching tags for $REPO..."
 
-          if [ -z "$latest_version" ]; then
-            next_version="v1"
+          TAGS=$(curl -s "https://hub.docker.com/v2/repositories/${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity/tags?page_size=10000" | jq -r '.results[].name' | grep -E '^v[0-9]+\.[0-9]+$' || echo "")
+
+          MAX_VERSION=$(echo "$TAGS" | sed 's/v//' | sort -V | tail -n 1)
+
+          if [[ -z "$MAX_VERSION" ]]; then
+            NEXT_VERSION="1.0"
           else
-            next_num=$(echo $latest_version | sed 's/v//')
-            next_num=$((next_num + 1))
-            next_version="v$next_num"
+            MAJOR=$(echo "$MAX_VERSION" | cut -d. -f1)
+            MINOR=$(echo "$MAX_VERSION" | cut -d. -f2)
+
+            if [[ "$MINOR" -ge 9 ]]; then
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+            else
+              MINOR=$((MINOR + 1))
+            fi
+
+            NEXT_VERSION="$MAJOR.$MINOR"
           fi
 
-          echo "Next version: $next_version"
-          echo "tag=$next_version" >> $GITHUB_OUTPUT
+          echo "Next version: v$NEXT_VERSION"
+          echo "VERSION=v$NEXT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build Docker Image with version and live tags
         run: |
-          docker build -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.tag }} \
+          docker build -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.VERSION }} \
                        -t ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:live \
                        -f src/IdentityService/IdentityService.Api/Dockerfile .
 
       - name: Push Both Docker Image Tags to Docker Hub
         run: |
           docker login -u ${{ secrets.DEV_HUB_USERNAME }} -p ${{ secrets.DEV_HUB_SECRET }}
-          docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.tag }}
+          docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:${{ steps.get_latest_tag.outputs.VERSION }}
           docker push ${{ secrets.DEV_HUB_USERNAME }}/kwik-nesta-identity:live
