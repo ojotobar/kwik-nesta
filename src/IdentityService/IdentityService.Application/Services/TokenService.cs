@@ -4,71 +4,32 @@ using IdentityService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace IdentityService.Application.Services
 {
     public class TokenService : ITokenService
     {
         private readonly IEFCoreCrudKit _db;
-        private readonly IOptions<Jwt> config;
         private readonly Jwt _config;
-        private readonly RSA _rsa;
 
-        public TokenService(IEFCoreCrudKit db, IOptions<Jwt> config, RSA rsa)
+        public TokenService(IEFCoreCrudKit db, IOptions<Jwt> config)
         {
             _db = db;
-            this.config = config;
             _config = config.Value;
-            _rsa = rsa;
         }
 
         public string CreateAccessToken(AppUser user, string[] roles)
         {
-            var now = DateTime.UtcNow;
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Iss, _config.Issuer),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.Name, user.UserName ?? ""),
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim("client_id", _config.ClientId) // optional
-            };
-            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+            var claims = GetClaims(user, roles);
+            var creds = GetSigningCredentials();
+            var jwt = GetJwtSecurityToken(claims, creds, DateTime.UtcNow);
 
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = now.Add(TimeSpan.FromHours(_config.Span)),
-                IssuedAt = now,
-                Issuer = _config.Issuer,
-                Audience = _config.Audience.Count == 1 ? _config.Audience.First() : null, // If single audience set Audience
-                SigningCredentials = new SigningCredentials(new RsaSecurityKey(_rsa), SecurityAlgorithms.RsaSha256)
-            };
-
-            var handler = new JwtSecurityTokenHandler();
-            var token = handler.CreateJwtSecurityToken(tokenDescriptor);
-
-            if (_config.Audience.Count > 1)
-            {
-                // add 'aud' as array manually
-                var jwt = new JwtSecurityToken(
-                    issuer: _config.Issuer,
-                    audience: null,
-                    claims: token.Claims,
-                    notBefore: token.ValidFrom,
-                    expires: token.ValidTo,
-                    signingCredentials: token.SigningCredentials
-                );
-                var payloadDict = jwt.Payload;
-                payloadDict["aud"] = _config.Audience;
-                return handler.WriteToken(jwt);
-            }
-
-            return handler.WriteToken(token);
+            return new JwtSecurityTokenHandler().WriteToken(jwt);
         }
 
         public async Task<string> CreateAndSaveRefreshTokenAsync(string userId)
@@ -107,5 +68,64 @@ namespace IdentityService.Application.Services
             var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(token));
             return Convert.ToBase64String(bytes);
         }
+
+        #region Private Section
+        private SigningCredentials GetSigningCredentials()
+        {
+            var key = Encoding.UTF8.GetBytes(_config.PrivateKey);
+            var secret = new SymmetricSecurityKey(key);
+            return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
+        }
+
+        private List<Claim> GetClaims(AppUser user, string[] roles)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                new Claim(JwtRegisteredClaimNames.Iss, _config.Issuer),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.Name, user.UserName!),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim("client_id", _config.ClientId) // optional
+            };
+            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
+            return claims;
+        }
+
+        private JwtSecurityToken GetJwtSecurityToken(List<Claim> claims, SigningCredentials creds, DateTime now)
+        {
+            JwtSecurityToken jwt;
+
+            if (_config.Audience.Count == 1)
+            {
+                // one audience → use built-in
+                jwt = new JwtSecurityToken(
+                    issuer: _config.Issuer,
+                    audience: _config.Audience.First(),
+                    claims: claims,
+                    notBefore: now,
+                    expires: now.AddHours(_config.Span),
+                    signingCredentials: creds
+                );
+            }
+            else
+            {
+                // multiple audiences → aud must be array
+                jwt = new JwtSecurityToken(
+                    issuer: _config.Issuer,
+                    claims: claims,
+                    notBefore: now,
+                    expires: now.AddHours(_config.Span),
+                    signingCredentials: creds
+                );
+
+                // manually override aud
+                jwt.Payload["aud"] = _config.Audience;
+            }
+
+            return jwt;
+        }
+        #endregion
     }
 }

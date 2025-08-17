@@ -1,9 +1,10 @@
-﻿using EFCore.CrudKit.Library.Data.Interfaces;
+﻿using CrossQueue.Hub.Services.Interfaces;
+using EFCore.CrudKit.Library.Data.Interfaces;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using System.Security.Cryptography;
 
 namespace IdentityService.Application.Services
 {
@@ -12,13 +13,14 @@ namespace IdentityService.Application.Services
         private readonly Lazy<ITokenService> _tokenService;
         private readonly Lazy<IUserService> _userService;
 
-        public ServiceManager(IEFCoreCrudKit crudKit, RSA rSA, IOptions<Jwt> options, UserManager<AppUser> userManager, 
-            SignInManager<AppUser> signInManager)
+        public ServiceManager(IEFCoreCrudKit crudKit, IOptions<Jwt> options, UserManager<AppUser> userManager, 
+            SignInManager<AppUser> signInManager, IHttpContextAccessor contextAccessor, IEFCoreCrudKit eFCoreCrud, 
+            IRabbitMQPubSub pubSub)
         {
             _tokenService = new Lazy<ITokenService>(() =>
-                new TokenService(crudKit, options, rSA));
+                new TokenService(crudKit, options));
             _userService = new Lazy<IUserService>(() =>
-                new UserService(userManager, signInManager));
+                new UserService(userManager, signInManager, contextAccessor, crudKit, pubSub));
         }
 
         public ITokenService Token => _tokenService.Value;

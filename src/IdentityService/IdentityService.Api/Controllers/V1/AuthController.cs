@@ -1,4 +1,5 @@
 ﻿using API.Common.Response.Model.ControllerHelpers;
+using API.Common.Response.Model.Extensions;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
@@ -37,15 +38,59 @@ namespace IdentityService.Api.Controllers.V1
                 return ProcessError(validationResult);
             }
 
-            var accessToken = _service.Token.CreateAccessToken(new AppUser(), new string[0]);
-            var refreshToken = await _service.Token.CreateAndSaveRefreshTokenAsync("");
-
+            var result = validationResult.GetResult<(AppUser User, string[] Roles)>();
+            var accessToken = _service.Token.CreateAccessToken(result.User, result.Roles);
+            var refreshToken = await _service.Token.CreateAndSaveRefreshTokenAsync(result.User.Id);
+            await _service.User.UpdateUserLastLogin(result.User.Id);
             return Ok(new LoginTokenDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                Expires = DateTime.UtcNow.AddMinutes(1)
             });
+        }
+
+        /// <summary>
+        /// Registers a new user
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(RegistrationRequest request)
+        {
+            var result = await _service.User.RegisterAsync(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<RegistrationDto>());
+        }
+
+        /// <summary>
+        /// Verifies newly created accounts
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPut("verify")]
+        public async Task<IActionResult> Verify(AccountVerificationRequest request)
+        {
+            var result = await _service.User.VerifyAccountAsync(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<string>());
         }
     }
 }

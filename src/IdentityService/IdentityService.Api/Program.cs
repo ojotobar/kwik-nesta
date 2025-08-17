@@ -1,6 +1,6 @@
+using CrossQueue.Hub.Shared.Extensions;
 using DiagnosKit.Core.Extensions;
 using IdentityService.Api.Extensions;
-using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,14 +13,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.ConfigureIdentityAndDbContext(builder.Configuration)
-    .ConfigureRSAEncryption(builder.Configuration)
     .ConfigureCors()
     .ConfigureServices()
     .ConfigureSwaggerDocs()
     .ConfigureApiVersioning()
+    .AddCrossQueueHubRabbitMqBus(builder.Configuration)
+    .ConfigureJwt(builder.Configuration)
     .AddLoggerManager();
 
-builder.Services.Configure<Jwt>(builder.Configuration.GetSection("Jwt"));
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 app.UseUnifiedErrorHandler();
 
@@ -33,6 +35,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication(); 
 app.UseAuthorization();
 
 app.MapControllers();

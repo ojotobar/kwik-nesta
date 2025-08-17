@@ -3,13 +3,14 @@ using IdentityService.Application.Services;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Security.Cryptography;
+using System.Text;
 
 namespace IdentityService.Api.Extensions
 {
@@ -43,20 +44,34 @@ namespace IdentityService.Api.Extensions
             return services;
         }
 
-        public static IServiceCollection ConfigureRSAEncryption(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection ConfigureJwt(this IServiceCollection services, IConfiguration configuration)
         {
-            RSA rsa = RSA.Create();
-            var rsaPrivatePem = configuration["Jwt:PrivateKey"];
-            if (!string.IsNullOrEmpty(rsaPrivatePem))
-            {
-                rsa.ImportFromPem(rsaPrivatePem.ToCharArray());
-            }
-            else
-            {
-                rsa.KeySize = 2048;
-            }
+            var section = configuration.GetSection("Jwt");
+            services.Configure<Jwt>(section);
+            var jwtOptions = section.Get<Jwt>() ?? 
+                throw new ArgumentNullException("JWT Config can not be null");
 
-            services.AddSingleton(rsa);
+            services.AddAuthentication(opt =>
+            {
+                opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions.Issuer!,
+
+                    ValidateAudience = true,
+                    ValidAudiences = jwtOptions.Audience,
+
+                    ValidateLifetime = true,
+
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.PrivateKey!))
+                };
+            });
             return services;
         }
 
