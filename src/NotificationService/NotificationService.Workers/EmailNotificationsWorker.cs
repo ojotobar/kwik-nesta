@@ -28,7 +28,7 @@ namespace NotificationService.Workers
 
             _pubSub.Subscribe<EmailNotification>("notification", async msg =>
             {
-                _logger.LogInformation("Received email notification for {Email}", msg);
+                _logger.LogInformation("Received email notification for {Email}", msg.EmailAddress);
                 await _handler.HandleAsync(msg);
             }, routingKey: "account.activation");
 

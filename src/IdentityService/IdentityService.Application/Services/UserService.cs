@@ -53,6 +53,11 @@ namespace IdentityService.Application.Services
                 return new NotFoundResponse("User not found");
             }
 
+            if (!user.EmailConfirmed || !user.IsActive)
+            {
+                return new ForbiddenResponse("You can't login at the moment. You have either not confirmed you email yet or your account is inactive");
+            }
+
             var check = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
             if (!check.Succeeded)
             {

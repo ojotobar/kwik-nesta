@@ -62,6 +62,7 @@ namespace IdentityService.Application.Services
             return rec;
         }
 
+        #region Private Section
         private string ComputeHash(string token)
         {
             using var sha = SHA256.Create();
@@ -69,7 +70,6 @@ namespace IdentityService.Application.Services
             return Convert.ToBase64String(bytes);
         }
 
-        #region Private Section
         private SigningCredentials GetSigningCredentials()
         {
             var key = Encoding.UTF8.GetBytes(_config.PrivateKey);
