@@ -23,7 +23,6 @@ namespace NotificationService.Workers.Services
 
         public async Task SendAccountActivationEmail(EmailNotification notification)
         {
-            await Task.CompletedTask;
             var template = LoadTemplate("account-activation");
             if (template.IsNullOrEmpty())
             {
@@ -44,11 +43,41 @@ namespace NotificationService.Workers.Services
             var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
             if (isSent)
             {
-                _logger.LogInformation($"Account activation email successfully sen to {notification.EmailAddress}");
+                _logger.LogInformation($"Account activation email successfully sent to {notification.EmailAddress}");
             }
             else
             {
                 _logger.LogError($"Account activation email failed for {notification.EmailAddress}");
+            }
+        }
+
+        public async Task SendPasswordResetEmail(EmailNotification notification)
+        {
+            var template = LoadTemplate("password-reset");
+            if (template.IsNullOrEmpty())
+            {
+                _logger.LogWarning("The template returned an empty string");
+            }
+
+            var body = template.Replace("{{FirstName}}", notification.ReceipientName)
+                .Replace("{{OTP}}", notification.Otp?.Value)
+                .Replace("{{validity}}", notification.Otp?.Span.ToString())
+                .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
+
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
+            var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
+            if (isSent)
+            {
+                _logger.LogInformation($"Password reset email successfully sent to {notification.EmailAddress}");
+            }
+            else
+            {
+                _logger.LogError($"Password reset email failed for {notification.EmailAddress}");
             }
         }
 

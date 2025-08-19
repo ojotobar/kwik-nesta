@@ -7,8 +7,11 @@ namespace IdentityService.Application.Services.Interfaces
     {
         Task<ApiBaseResponse> GetLoggedInUserLeanAsync();
         Task<ApiBaseResponse> RegisterAsync(RegistrationRequest request, bool forAdmin = false);
+        Task<ApiBaseResponse> ResendOtpAsync(OtpResendRequest request);
+        Task<ApiBaseResponse> RequestPasswordResetAsync(EmailPayload request);
         Task<ApiBaseResponse> UpdateUserLastLogin(string id);
         Task<ApiBaseResponse> ValidateUser(LoginRequest request);
         Task<ApiBaseResponse> VerifyAccountAsync(AccountVerificationRequest request);
+        Task<ApiBaseResponse> PasswordResetAsync(PasswordResetRequest request);
     }
 }

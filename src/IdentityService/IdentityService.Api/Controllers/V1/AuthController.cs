@@ -92,5 +92,69 @@ namespace IdentityService.Api.Controllers.V1
 
             return Ok(result.GetResult<string>());
         }
+
+        /// <summary>
+        /// Resends OTP
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp(OtpResendRequest request)
+        {
+            var result = await _service.User.ResendOtpAsync(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<string>());
+        }
+
+        /// <summary>
+        /// Requests password reset
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPost("request-password-reset")]
+        public async Task<IActionResult> RequestPasswordReset(EmailPayload request)
+        {
+            var result = await _service.User.RequestPasswordResetAsync(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<string>());
+        }
+
+        /// <summary>
+        /// Password reset
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPut("reset-password")]
+        public async Task<IActionResult> PasswordReset(PasswordResetRequest request)
+        {
+            var result = await _service.User.PasswordResetAsync(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<string>());
+        }
     }
 }

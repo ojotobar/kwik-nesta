@@ -27,10 +27,10 @@ namespace IdentityService.Api.Extensions
             }
 
             var email = config["AdminUser:Email"];
-            var password = config["AdminUser:Password"];
+            var password = config["AdminUser:NewPassword"];
             if (email!.IsNullOrEmpty() ||password!.IsNullOrEmpty())
             {
-                logger.LogWarning("Email and/or Password is null or empty string");
+                logger.LogWarning("Email and/or NewPassword is null or empty string");
                 return;
             }
 

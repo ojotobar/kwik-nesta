@@ -2,6 +2,8 @@
 using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
+using IdentityService.Domain.Enums;
+using static System.Net.WebRequestMethods;
 
 namespace IdentityService.Application.Extensions
 {
@@ -21,14 +23,33 @@ namespace IdentityService.Application.Extensions
             };
         }
 
-        public static OtpEntry Map(this AppUser user, string hash, string salt, int span = 10)
+        public static OtpEntry Map(this AppUser user, string hash, string salt, OtpType otpType = OtpType.AccountVerification, string? token = null, int span = 10)
         {
             return new OtpEntry
             {
                 UserId = user.Id,
                 OtpHash = hash,
                 OtpSalt = salt,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(span)
+                ExpiresAt = DateTime.UtcNow.AddMinutes(span),
+                Type = otpType,
+                Token = token
+            };
+        }
+
+        public static EmailNotification Map(this AppUser user, string subject, 
+            string otp, DateTime expires, EmailType emailType = EmailType.AccountActivation)
+        {
+            return new EmailNotification
+            {
+                EmailAddress = user.Email!,
+                ReceipientName = user.FirstName,
+                Type = emailType,
+                Subject = subject,
+                Otp = new OtpData
+                {
+                    Value = otp,
+                    Span = (int)Math.Ceiling(expires.Subtract(DateTime.UtcNow).TotalMinutes)
+                }
             };
         }
 

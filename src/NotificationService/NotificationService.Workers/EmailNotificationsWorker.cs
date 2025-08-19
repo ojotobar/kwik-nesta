@@ -30,7 +30,7 @@ namespace NotificationService.Workers
             {
                 _logger.LogInformation("Received email notification for {Email}", msg.EmailAddress);
                 await _handler.HandleAsync(msg);
-            }, routingKey: "account.activation");
+            }, routingKey: "email.notifications");
 
             await Task.CompletedTask;
         }

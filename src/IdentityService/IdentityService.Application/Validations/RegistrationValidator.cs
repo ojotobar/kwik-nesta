@@ -25,7 +25,7 @@ namespace IdentityService.Application.Validations
                 .MinimumLength(8).WithMessage("{PropertyName} field must be at least 8 characters.");
             RuleFor(x => x)
                 .Must(args => ValidationExtensions.IsAMatch(args.Password, args.ConfirmPassword))
-                .WithMessage("Password and Confirm Password must match");
+                .WithMessage("NewPassword and Confirm NewPassword must match");
             RuleFor(x => x.Role)
                 .IsInEnum().WithMessage("Invalid role type");
             RuleFor(x => x.Gender)

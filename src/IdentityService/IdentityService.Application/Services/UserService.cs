@@ -114,24 +114,74 @@ namespace IdentityService.Application.Services
             await _crudKit.InsertAsync(otpEntry);
 
             // Send activation email to user
-            await _pubSub.PublishAsync(new EmailNotification
-            {
-                EmailAddress = user.Email!,
-                ReceipientName = user.FirstName,
-                Type = EmailType.AccountActivation,
-                Subject = "Activate Your Account",
-                Otp = new OtpData
-                {
-                    Value = otp,
-                    Span = (int)Math.Ceiling(otpEntry.ExpiresAt.Subtract(DateTime.UtcNow).TotalMinutes)
-                }
-            }, routingKey: "account.activation");
+            (string Subject, string RoutingKey, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.AccountVerification);
+            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt), 
+                routingKey: RoutingKey);
+            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
+                routingKey: RoutingKey);
             // Return to the user
             return new OkResponse<RegistrationDto>(new RegistrationDto
             {
                 Email = user.Email,
                 Message = "Registration successful. Please check your mail for your activation code"
             });
+        }
+
+        public async Task<ApiBaseResponse> ResendOtpAsync(OtpResendRequest request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new NotFoundResponse("No user found with this email");
+            }
+
+            if (user.EmailConfirmed && request.Type == OtpType.AccountVerification)
+            {
+                return new ForbiddenResponse("Account already verified. Please login");
+            }
+
+            var existingOtp = await _crudKit
+               .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == request.Type, false)
+               .OrderByDescending(o => o.ExpiresAt)
+               .FirstOrDefaultAsync();
+
+            var otp = GenerateOtp();
+            var (Hash, Salt) = HashOtp(otp);
+            var otpEntry = user.Map(Hash, Salt, request.Type);
+            await _crudKit.InsertAsync(otpEntry);
+
+            (string Subject,string RoutingKey, EmailType Type) = GetSubjectLineAndRoutingKey(request.Type);
+            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
+                routingKey: RoutingKey);
+
+            if(existingOtp != null)
+            {
+                await _crudKit.DeleteAsync(existingOtp);
+            }
+
+            return new OkResponse<string>($"OTP successfully resent. Please check your email");
+        }
+
+        public async Task<ApiBaseResponse> RequestPasswordResetAsync(EmailPayload request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new NotFoundResponse("No user found with this email");
+            }
+
+            var otp = GenerateOtp();
+            var (Hash, Salt) = HashOtp(otp);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var otpEntry = user.Map(Hash, Salt, OtpType.ResetPassword, token);
+
+            await _crudKit.InsertAsync(otpEntry);
+
+            (string Subject, string RoutingKey, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.ResetPassword);
+            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
+                routingKey: RoutingKey);
+
+            return new OkResponse<string>($"Password reset request successful. Please enter the OTP sent to your email to complete the process");
         }
 
         public async Task<ApiBaseResponse> VerifyAccountAsync(AccountVerificationRequest request)
@@ -148,7 +198,7 @@ namespace IdentityService.Application.Services
             }
 
             var otpEntry = await _crudKit
-                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id), false)
+                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.AccountVerification, false)
                 .OrderByDescending(o => o.ExpiresAt)
                 .FirstOrDefaultAsync();
 
@@ -172,6 +222,50 @@ namespace IdentityService.Application.Services
 
             await _crudKit.DeleteAsync(otpEntry);
             return new OkResponse<string>("Account successfully verified. Please proceed to login");
+        }
+
+        public async Task<ApiBaseResponse> PasswordResetAsync(PasswordResetRequest request)
+        {
+            if (!request.IsValid)
+            {
+                return new BadRequestResponse($"Invalid request");
+            }
+
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new NotFoundResponse($"No user found with the specified email address");
+            }
+
+            var otpEntry = await _crudKit
+                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.ResetPassword, false)
+                .OrderByDescending(o => o.ExpiresAt)
+                .FirstOrDefaultAsync();
+
+            if (otpEntry == null)
+            {
+                return new NotFoundResponse($"No valid OTP found for this user");
+            }
+
+            bool isValid = VerifyOtp(request.Otp, otpEntry.OtpHash, otpEntry.OtpSalt)
+                          && otpEntry.ExpiresAt.IsLaterThan(DateTime.UtcNow) && otpEntry.Token!.IsNotNullOrEmpty();
+
+            if (!isValid)
+            {
+                return new ForbiddenResponse("OTP has expired. Please request for a new one.");
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, Uri.UnescapeDataString(otpEntry.Token!), request.NewPassword);
+            if (!result.Succeeded)
+            {
+                return new BadRequestResponse($"{result.Errors.FirstOrDefault()?.Description}" ?? "Password reset failed.");
+            }
+
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            await _crudKit.DeleteAsync(otpEntry);
+            return new OkResponse<string>("Password successfully reset. Please login with your new password");
         }
 
         public async Task<ApiBaseResponse> GetLoggedInUserLeanAsync()
@@ -272,6 +366,16 @@ namespace IdentityService.Application.Services
 
             var computedHash = Convert.ToBase64String(hash);
             return computedHash == storedHash;
+        }
+
+        private (string Subject, string RoutingKey, EmailType Type) GetSubjectLineAndRoutingKey(OtpType otpType)
+        {
+            return otpType switch
+            {
+                OtpType.AccountVerification => ("Activate Your Account", "email.notifications", EmailType.AccountActivation),
+                OtpType.ResetPassword => ("Reset Your Password", "email.notifications", EmailType.PasswordReset),
+                _ => throw new NotImplementedException(),
+            };
         }
         #endregion
     }

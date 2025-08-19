@@ -1,4 +1,5 @@
 ﻿using EFCore.CrudKit.Library.Models;
+using IdentityService.Domain.Enums;
 
 namespace IdentityService.Domain.Entities
 {
@@ -8,6 +9,8 @@ namespace IdentityService.Domain.Entities
         public string OtpHash { get; set; } = string.Empty;
         public string OtpSalt { get; set; } = string.Empty;
         public DateTime ExpiresAt { get; set; }
+        public OtpType Type { get; set; } = OtpType.AccountVerification;
+        public string? Token { get; set; }
         public int Attempts { get; set; }
     }
 }

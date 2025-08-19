@@ -26,6 +26,7 @@ namespace NotificationService.Workers.Handlers
                         await _emailSenders.SendAccountActivationEmail(message);
                         break;
                     case EmailType.PasswordReset:
+                        await _emailSenders.SendPasswordResetEmail(message);
                     break;
                 }
            }
