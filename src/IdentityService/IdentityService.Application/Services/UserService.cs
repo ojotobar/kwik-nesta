@@ -18,6 +18,7 @@ using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using static System.Net.WebRequestMethods;
 
 namespace IdentityService.Application.Services
 {
@@ -114,11 +115,10 @@ namespace IdentityService.Application.Services
             await _crudKit.InsertAsync(otpEntry);
 
             // Send activation email to user
-            (string Subject, string RoutingKey, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.AccountVerification);
-            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt), 
-                routingKey: RoutingKey);
+            (string Subject, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.AccountVerification);
             await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
-                routingKey: RoutingKey);
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
             // Return to the user
             return new OkResponse<RegistrationDto>(new RegistrationDto
             {
@@ -150,16 +150,16 @@ namespace IdentityService.Application.Services
             var otpEntry = user.Map(Hash, Salt, request.Type);
             await _crudKit.InsertAsync(otpEntry);
 
-            (string Subject,string RoutingKey, EmailType Type) = GetSubjectLineAndRoutingKey(request.Type);
+            (string Subject, EmailType Type) = GetSubjectLineAndRoutingKey(request.Type);
             await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
-                routingKey: RoutingKey);
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             if(existingOtp != null)
             {
                 await _crudKit.DeleteAsync(existingOtp);
             }
 
-            return new OkResponse<string>($"OTP successfully resent. Please check your email");
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"OTP successfully resent. Please check your email"));
         }
 
         public async Task<ApiBaseResponse> RequestPasswordResetAsync(EmailPayload request)
@@ -177,11 +177,11 @@ namespace IdentityService.Application.Services
 
             await _crudKit.InsertAsync(otpEntry);
 
-            (string Subject, string RoutingKey, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.ResetPassword);
+            (string Subject, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.ResetPassword);
             await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
-                routingKey: RoutingKey);
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
-            return new OkResponse<string>($"Password reset request successful. Please enter the OTP sent to your email to complete the process");
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Password reset request successful. Please enter the OTP sent to your email to complete the process"));
         }
 
         public async Task<ApiBaseResponse> VerifyAccountAsync(AccountVerificationRequest request)
@@ -221,7 +221,7 @@ namespace IdentityService.Application.Services
             await _userManager.UpdateAsync(user);
 
             await _crudKit.DeleteAsync(otpEntry);
-            return new OkResponse<string>("Account successfully verified. Please proceed to login");
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto("Account successfully verified. Please proceed to login"));
         }
 
         public async Task<ApiBaseResponse> PasswordResetAsync(PasswordResetRequest request)
@@ -263,9 +263,50 @@ namespace IdentityService.Application.Services
 
             user.UpdatedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
-
             await _crudKit.DeleteAsync(otpEntry);
-            return new OkResponse<string>("Password successfully reset. Please login with your new password");
+
+            // Notify the user.
+            await _pubSub.PublishAsync(new EmailNotification
+            {
+                EmailAddress = user.Email!,
+                ReceipientName = user.FirstName,
+                Type = EmailType.PasswordResetNotification,
+                Subject = "Password Change Notification - Kwik Nesta Inc.",
+            }, routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto("Password successfully reset. Please login with your new password"));
+        }
+
+        public async Task<ApiBaseResponse> ChangePasswordAsync(PasswordChangeRequest request)
+        {
+            if (!request.IsValid)
+            {
+                return new BadRequestResponse("Invalid request");
+            }
+
+            var loggedInUserId = GetLoggedInUserId();
+            var user = await _userManager.FindByIdAsync(loggedInUserId);
+            if (user == null)
+            {
+                return new ForbiddenResponse("Access denied");
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                return new BadRequestResponse($"{result.Errors.FirstOrDefault()?.Description}");
+            }
+
+            // Notify the user.
+            await _pubSub.PublishAsync(new EmailNotification
+            {
+                EmailAddress = user.Email!,
+                ReceipientName = user.FirstName,
+                Type = EmailType.PasswordResetNotification,
+                Subject = "Password Change Notification - Kwik Nesta Inc.",
+            }, routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto("Password changed successfully. Please login with the new password"));
         }
 
         public async Task<ApiBaseResponse> GetLoggedInUserLeanAsync()
@@ -368,12 +409,12 @@ namespace IdentityService.Application.Services
             return computedHash == storedHash;
         }
 
-        private (string Subject, string RoutingKey, EmailType Type) GetSubjectLineAndRoutingKey(OtpType otpType)
+        private (string Subject, EmailType Type) GetSubjectLineAndRoutingKey(OtpType otpType)
         {
             return otpType switch
             {
-                OtpType.AccountVerification => ("Activate Your Account", "email.notifications", EmailType.AccountActivation),
-                OtpType.ResetPassword => ("Reset Your Password", "email.notifications", EmailType.PasswordReset),
+                OtpType.AccountVerification => ("Activate Your Account", EmailType.AccountActivation),
+                OtpType.ResetPassword => ("Reset Your Password", EmailType.PasswordReset),
                 _ => throw new NotImplementedException(),
             };
         }

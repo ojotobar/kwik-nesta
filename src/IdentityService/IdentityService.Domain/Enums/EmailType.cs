@@ -3,6 +3,7 @@
     public enum EmailType
     {
         AccountActivation,
-        PasswordReset
+        PasswordReset,
+        PasswordResetNotification
     }
 }

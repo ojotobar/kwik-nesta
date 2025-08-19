@@ -18,7 +18,7 @@ namespace IdentityService.Application.Services
             IRabbitMQPubSub pubSub)
         {
             _tokenService = new Lazy<ITokenService>(() =>
-                new TokenService(crudKit, options));
+                new TokenService(crudKit, options, userManager));
             _userService = new Lazy<IUserService>(() =>
                 new UserService(userManager, signInManager, contextAccessor, crudKit, pubSub));
         }

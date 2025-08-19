@@ -1,6 +1,9 @@
-﻿using EFCore.CrudKit.Library.Data.Interfaces;
+﻿using API.Common.Response.Model.Responses;
+using EFCore.CrudKit.Library.Data.Interfaces;
 using IdentityService.Application.Services.Interfaces;
+using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -15,11 +18,13 @@ namespace IdentityService.Application.Services
     public class TokenService : ITokenService
     {
         private readonly IEFCoreCrudKit _db;
+        private readonly UserManager<AppUser> _userManager;
         private readonly Jwt _config;
 
-        public TokenService(IEFCoreCrudKit db, IOptions<Jwt> config)
+        public TokenService(IEFCoreCrudKit db, IOptions<Jwt> config, UserManager<AppUser> userManager)
         {
             _db = db;
+            _userManager = userManager;
             _config = config.Value;
         }
 
@@ -49,15 +54,48 @@ namespace IdentityService.Application.Services
             return token;
         }
 
+        public async Task<ApiBaseResponse> RefreshTokenAsync(RefreshTokenRequest request)
+        {
+            if(request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+            {
+                return new UnauthorizedResponse("Invalid refresh token");
+            }
+
+            var storedToken = await ValidateRefreshTokenAsync(request.RefreshToken);
+            if(storedToken == null)
+            {
+                return new UnauthorizedResponse("Invalid or expired token");
+            }
+
+            // (Optional) check if user is still active
+            var user = await _userManager.FindByIdAsync(storedToken.UserId);
+            if (user == null)
+            {
+                return new NotFoundResponse("User not found");
+            }
+
+            // generate new tokens
+            var roles = (await _userManager.GetRolesAsync(user)).ToArray();
+            var newAccessToken = CreateAccessToken(user, roles);
+
+            return new OkResponse<(string AccessToken, string RefreshToken)>((newAccessToken, request.RefreshToken));
+        }
+
         public async Task<RefreshToken?> ValidateRefreshTokenAsync(string token)
         {
             var hash = ComputeHash(token);
             var rec = await _db.AsQueryable<RefreshToken>(r => r.TokenHash == hash && r.ClientId == _config.ClientId, false)
                 .FirstOrDefaultAsync();
 
-            if (rec == null || rec.RevokedAt != null || rec.ExpiresAt < DateTimeOffset.UtcNow)
+            if (rec == null || rec.RevokedAt != null)
             {
                 return null;
+            }
+            if (rec.ExpiresAt < DateTimeOffset.UtcNow)
+            {
+                rec.RevokedAt = DateTimeOffset.UtcNow;
+                rec.IsDeprecated = true;
+                await _db.UpdateAsync(rec);
             }
             return rec;
         }

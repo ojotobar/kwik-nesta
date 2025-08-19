@@ -6,5 +6,6 @@ namespace NotificationService.Workers.Services.Interfaces
     {
         Task SendAccountActivationEmail(EmailNotification notification);
         Task SendPasswordResetEmail(EmailNotification notification);
+        Task SendPasswordResetNotificationEmail(EmailNotification notification);
     }
 }

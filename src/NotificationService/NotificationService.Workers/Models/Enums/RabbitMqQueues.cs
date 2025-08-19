@@ -2,9 +2,9 @@
 
 namespace NotificationService.Workers.Models.Enums
 {
-    public enum MessageQueues
+    public enum RabbitMqQueues
     {
-        [Description("account")]
-        AccountEmail
+        [Description("notification")]
+        Notification
     }
 }

@@ -27,7 +27,10 @@ namespace NotificationService.Workers.Handlers
                         break;
                     case EmailType.PasswordReset:
                         await _emailSenders.SendPasswordResetEmail(message);
-                    break;
+                        break;
+                    case EmailType.PasswordResetNotification:
+                        await _emailSenders.SendPasswordResetNotificationEmail(message);
+                        break;
                 }
            }
            else

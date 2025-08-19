@@ -1,9 +1,11 @@
 ﻿using API.Common.Response.Model.ControllerHelpers;
 using API.Common.Response.Model.Extensions;
+using Azure.Core;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityService.Api.Controllers.V1
@@ -49,6 +51,26 @@ namespace IdentityService.Api.Controllers.V1
             });
         }
 
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPut("refresh")]
+        public async Task<IActionResult> Refresh(RefreshTokenRequest request)
+        {
+            var baseResult = await _service.Token.RefreshTokenAsync(request);
+            if (!baseResult.Success)
+            {
+                return ProcessError(baseResult);
+            }
+
+            var result = baseResult.GetResult<(string AccessToken, string RefreshToken)>();
+            return Ok(new LoginTokenDto
+            {
+                AccessToken = result.AccessToken,
+                RefreshToken = result.RefreshToken,
+            });
+        }
+
         /// <summary>
         /// Registers a new user
         /// </summary>
@@ -90,7 +112,7 @@ namespace IdentityService.Api.Controllers.V1
                 return ProcessError(result);
             }
 
-            return Ok(result.GetResult<string>());
+            return Ok(result.GetResult<SuccessStringDto>());
         }
 
         /// <summary>
@@ -112,7 +134,7 @@ namespace IdentityService.Api.Controllers.V1
                 return ProcessError(result);
             }
 
-            return Ok(result.GetResult<string>());
+            return Ok(result.GetResult<SuccessStringDto>());
         }
 
         /// <summary>
@@ -133,7 +155,7 @@ namespace IdentityService.Api.Controllers.V1
                 return ProcessError(result);
             }
 
-            return Ok(result.GetResult<string>());
+            return Ok(result.GetResult<SuccessStringDto>());
         }
 
         /// <summary>
@@ -154,7 +176,29 @@ namespace IdentityService.Api.Controllers.V1
                 return ProcessError(result);
             }
 
-            return Ok(result.GetResult<string>());
+            return Ok(result.GetResult<SuccessStringDto>());
+        }
+
+        /// <summary>
+        /// Password change
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPut("change-password")]
+        [Authorize]
+        public async Task<IActionResult> PasswordChange(PasswordChangeRequest request)
+        {
+            var result = await _service.User.ChangePasswordAsync(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<SuccessStringDto>());
         }
     }
 }

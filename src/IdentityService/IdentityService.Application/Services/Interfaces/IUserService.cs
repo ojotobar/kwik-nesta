@@ -13,5 +13,6 @@ namespace IdentityService.Application.Services.Interfaces
         Task<ApiBaseResponse> ValidateUser(LoginRequest request);
         Task<ApiBaseResponse> VerifyAccountAsync(AccountVerificationRequest request);
         Task<ApiBaseResponse> PasswordResetAsync(PasswordResetRequest request);
+        Task<ApiBaseResponse> ChangePasswordAsync(PasswordChangeRequest request);
     }
 }

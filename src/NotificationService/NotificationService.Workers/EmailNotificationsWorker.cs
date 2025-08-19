@@ -1,6 +1,8 @@
 using CrossQueue.Hub.Services.Interfaces;
+using CSharpTypes.Extensions.Enumeration;
 using NotificationService.Workers.Handlers;
 using NotificationService.Workers.Models;
+using NotificationService.Workers.Models.Enums;
 
 namespace NotificationService.Workers
 {
@@ -26,11 +28,11 @@ namespace NotificationService.Workers
         {
             _logger.LogInformation("Worker started....");
 
-            _pubSub.Subscribe<EmailNotification>("notification", async msg =>
+            _pubSub.Subscribe<EmailNotification>(RabbitMqQueues.Notification.GetDescription(), async msg =>
             {
                 _logger.LogInformation("Received email notification for {Email}", msg.EmailAddress);
                 await _handler.HandleAsync(msg);
-            }, routingKey: "email.notifications");
+            }, routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             await Task.CompletedTask;
         }

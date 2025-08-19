@@ -1,4 +1,5 @@
 ﻿using API.Common.Response.Model.Responses;
+using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
 
 namespace IdentityService.Application.Services.Interfaces
@@ -7,6 +8,7 @@ namespace IdentityService.Application.Services.Interfaces
     {
         string CreateAccessToken(AppUser user, string[] roles);
         Task<string> CreateAndSaveRefreshTokenAsync(string userId);
+        Task<ApiBaseResponse> RefreshTokenAsync(RefreshTokenRequest request);
         Task<RefreshToken?> ValidateRefreshTokenAsync(string token);
     }
 }
