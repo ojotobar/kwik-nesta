@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;background-color:#f5f7fa;">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Reactivation OTP - Kwik Nesta Inc.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .header {
+            background-color: #004aad;
+            padding: 20px;
+            text-align: center;
+        }
+
+            .header img {
+                max-height: 50px;
+            }
+
+        .content {
+            padding: 30px;
+        }
+
+        h1 {
+            color: #004aad;
+            font-size: 22px;
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .otp-box {
+            display: inline-block;
+            background-color: #f0f4ff;
+            color: #004aad;
+            font-weight: bold;
+            font-size: 24px;
+            letter-spacing: 4px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background-color: #f5f7fa;
+            padding: 15px;
+            font-size: 12px;
+            text-align: center;
+            color: #888888;
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://res.cloudinary.com/dctevxse1/image/upload/v1755309471/lbllx0uwgmgqucq8h83u.png" alt="Kwik Nesta Inc. Logo">
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h1>Account Reactivation</h1>
+            <p>Hello {{FirstName}},</p>
+            <p>We received a request to <strong>reactivate your account</strong> with <strong>Kwik Nesta Inc.</strong>. Please use the OTP below to verify your identity and unlock your account:</p>
+
+            <div class="otp-box">
+                {{OTP}}
+            </div>
+
+            <p>This OTP is valid for <strong>{{validity}} minutes</strong>. Do not share it with anyone — even our support team will never ask for it.</p>
+
+            <p>If you didn’t request this reactivation, you can safely ignore this email. Your account will remain deactivated until you choose to reactivate it.</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            &copy; {{Year}} Kwik Nesta Inc. All rights reserved.<br>
+            This is an automated email — please do not reply.
+        </div>
+    </div>
+</body>
+</html>

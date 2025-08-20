@@ -8,6 +8,7 @@ namespace IdentityService.Domain.Entities
         public string EmailAddress { get; set; } = string.Empty;
         public string Subject { get; set; } = string.Empty;
         public EmailType Type{ get; set; }
+        public string? Reason { get; set; }
         public OtpData? Otp { get; set; }
     }
 

@@ -23,6 +23,12 @@ namespace NotificationService.Workers.Services
 
         public async Task SendAccountActivationEmail(EmailNotification notification)
         {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
             var template = LoadTemplate("account-activation");
             if (template.IsNullOrEmpty())
             {
@@ -33,12 +39,6 @@ namespace NotificationService.Workers.Services
                 .Replace("{{OTP}}", notification.Otp?.Value)
                 .Replace("{{validity}}", notification.Otp?.Span.ToString())
                 .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
-
-            var valid = ValidatePayload(notification);
-            if(!valid)
-            {
-                _logger.LogWarning("Invalid notification payload");
-            }
 
             var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
             if (isSent)
@@ -53,6 +53,12 @@ namespace NotificationService.Workers.Services
 
         public async Task SendPasswordResetEmail(EmailNotification notification)
         {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
             var template = LoadTemplate("password-reset");
             if (template.IsNullOrEmpty())
             {
@@ -63,12 +69,6 @@ namespace NotificationService.Workers.Services
                 .Replace("{{OTP}}", notification.Otp?.Value)
                 .Replace("{{validity}}", notification.Otp?.Span.ToString())
                 .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
-
-            var valid = ValidatePayload(notification);
-            if (!valid)
-            {
-                _logger.LogWarning("Invalid notification payload");
-            }
 
             var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
             if (isSent)
@@ -83,6 +83,12 @@ namespace NotificationService.Workers.Services
 
         public async Task SendPasswordResetNotificationEmail(EmailNotification notification)
         {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
             var template = LoadTemplate("password-reset-notification");
             if (template.IsNullOrEmpty())
             {
@@ -92,12 +98,6 @@ namespace NotificationService.Workers.Services
             var body = template.Replace("{{FirstName}}", notification.ReceipientName)
                 .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
 
-            var valid = ValidatePayload(notification);
-            if (!valid)
-            {
-                _logger.LogWarning("Invalid notification payload");
-            }
-
             var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
             if (isSent)
             {
@@ -106,6 +106,152 @@ namespace NotificationService.Workers.Services
             else
             {
                 _logger.LogError($"Password reset notification email failed for {notification.EmailAddress}");
+            }
+        }
+
+        public async Task SendAccountDeactivationEmail(EmailNotification notification)
+        {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
+            var template = LoadTemplate(notification.Type.GetDescription());
+            if (template.IsNullOrEmpty())
+            {
+                _logger.LogWarning("The template returned an empty string");
+            }
+
+            var now = DateTime.UtcNow;
+            var body = template.Replace("{{FirstName}}", notification.ReceipientName)
+                .Replace("{{DeactivationDate}}", now.ToString("d"))
+                .Replace("{{Year}}", now.Year.ToString());
+
+            var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
+            if (isSent)
+            {
+                _logger.LogInformation($"Account deactivation notification email successfully sent to {notification.EmailAddress}");
+            }
+            else
+            {
+                _logger.LogError($"Account deactivation notification email failed for {notification.EmailAddress}");
+            }
+        }
+
+        public async Task SendAccountReactivationEmail(EmailNotification notification)
+        {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
+            var template = LoadTemplate(notification.Type.GetDescription());
+            if (template.IsNullOrEmpty())
+            {
+                _logger.LogWarning("The template returned an empty string");
+            }
+
+            var now = DateTime.UtcNow;
+            var body = template.Replace("{{FirstName}}", notification.ReceipientName)
+                .Replace("{{OTP}}", notification.Otp?.Value)
+                .Replace("{{validity}}", notification.Otp?.Span.ToString())
+                .Replace("{{Year}}", now.Year.ToString());
+
+            var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
+            if (isSent)
+            {
+                _logger.LogInformation($"Account reactivation OTP email successfully sent to {notification.EmailAddress}");
+            }
+            else
+            {
+                _logger.LogError($"Account reactivation OTP email failed for {notification.EmailAddress}");
+            }
+        }
+
+        public async Task SendAccountReactivationNotificationEmail(EmailNotification notification)
+        {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
+            var template = LoadTemplate(notification.Type.GetDescription());
+            if (template.IsNullOrEmpty())
+            {
+                _logger.LogWarning("The template returned an empty string");
+            }
+
+            var body = template.Replace("{{FirstName}}", notification.ReceipientName)
+                .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
+
+            var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
+            if (isSent)
+            {
+                _logger.LogInformation($"Account reactivation notification email successfully sent to {notification.EmailAddress}");
+            }
+            else
+            {
+                _logger.LogError($"Account reactivation notification email failed for {notification.EmailAddress}");
+            }
+        }
+
+        public async Task SendAccountSuspensionEmail(EmailNotification notification)
+        {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
+            var template = LoadTemplate(notification.Type.GetDescription());
+            if (template.IsNullOrEmpty())
+            {
+                _logger.LogWarning("The template returned an empty string");
+            }
+
+            var body = template.Replace("{{FirstName}}", notification.ReceipientName)
+                .Replace("{{Reason}}", notification.Reason)
+                .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
+
+            var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
+            if (isSent)
+            {
+                _logger.LogInformation($"Account suspension notification email successfully sent to {notification.EmailAddress}");
+            }
+            else
+            {
+                _logger.LogError($"Account suspension notification email failed for {notification.EmailAddress}");
+            }
+        }
+
+        public async Task SendAdminRectivationNotificationEmail(EmailNotification notification)
+        {
+            var valid = ValidatePayload(notification);
+            if (!valid)
+            {
+                _logger.LogWarning("Invalid notification payload");
+            }
+
+            var template = LoadTemplate(notification.Type.GetDescription());
+            if (template.IsNullOrEmpty())
+            {
+                _logger.LogWarning("The template returned an empty string");
+            }
+
+            var body = template.Replace("{{FirstName}}", notification.ReceipientName)
+                .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
+
+            var isSent = await _mailJet.SendAsync(notification.EmailAddress, body, notification.Subject);
+            if (isSent)
+            {
+                _logger.LogInformation($"Account suspension lift notification email successfully sent to {notification.EmailAddress}");
+            }
+            else
+            {
+                _logger.LogError($"Account suspension lift notification email failed for {notification.EmailAddress}");
             }
         }
 
@@ -132,12 +278,17 @@ namespace NotificationService.Workers.Services
                 return false;
             }
 
-            if(notification.Type is EmailType.AccountActivation or EmailType.PasswordReset)
+            if(notification.Type is EmailType.AccountActivation or EmailType.PasswordReset or EmailType.AccountReactivation)
             {
                 if (notification.Otp.IsNull() || (notification.Otp != null && notification.Otp.Value.IsNullOrEmpty()))
                 {
                     return false;
                 }
+            }
+
+            if(notification.Type is EmailType.AccountSuspension && !string.IsNullOrWhiteSpace(notification.Reason))
+            {
+                return false;
             }
 
             return true;

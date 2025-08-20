@@ -3,8 +3,6 @@ using CSharpTypes.Extensions.String;
 using IdentityService.Domain.Entities;
 using IdentityService.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using System.Net.NetworkInformation;
 
 namespace IdentityService.Api.Extensions
 {
@@ -27,10 +25,11 @@ namespace IdentityService.Api.Extensions
             }
 
             var email = config["AdminUser:Email"];
-            var password = config["AdminUser:NewPassword"];
-            if (email!.IsNullOrEmpty() ||password!.IsNullOrEmpty())
+            var password = config["AdminUser:Password"];
+            var phone = config["AdminUser:PhoneNumber"];
+            if (email!.IsNullOrEmpty() || password!.IsNullOrEmpty() || phone!.IsNullOrEmpty())
             {
-                logger.LogWarning("Email and/or NewPassword is null or empty string");
+                logger.LogWarning("Email, phone, and/or password is null or empty string");
                 return;
             }
 
@@ -43,11 +42,12 @@ namespace IdentityService.Api.Extensions
                     FirstName = "System",
                     LastName = "Admin",
                     Email = email,
-                    PhoneNumber = "+2348035222858",
+                    PhoneNumber = phone,
                     UserName = email,
                     Gender = Gender.Male,
-                    IsActive = true,
+                    Status = UserStatus.Active,
                     EmailConfirmed = true,
+                    PhoneNumberConfirmed = true
                 };
 
                 var result = await userManager.CreateAsync(user, password!);

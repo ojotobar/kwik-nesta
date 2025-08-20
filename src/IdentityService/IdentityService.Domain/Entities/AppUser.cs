@@ -11,8 +11,8 @@ namespace IdentityService.Domain.Entities
         [Required]
         public string LastName { get; set; } = string.Empty;
         public string? OtherName { get; set; }
-        public bool IsActive { get; set; }
         public Gender Gender { get; set; } = Gender.Others;
+        public UserStatus Status { get; set; } = UserStatus.PendingVerification;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastLogin { get; set; }

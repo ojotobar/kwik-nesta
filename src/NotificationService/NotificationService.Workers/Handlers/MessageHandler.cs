@@ -31,9 +31,24 @@ namespace NotificationService.Workers.Handlers
                     case EmailType.PasswordResetNotification:
                         await _emailSenders.SendPasswordResetNotificationEmail(message);
                         break;
+                    case EmailType.AccountDeactivation:
+                        await _emailSenders.SendAccountDeactivationEmail(message);
+                        break;
+                    case EmailType.AccountReactivation:
+                        await _emailSenders.SendAccountReactivationEmail(message);
+                        break;
+                    case EmailType.AccountSuspension:
+                        await _emailSenders.SendAccountSuspensionEmail(message);
+                        break;
+                    case EmailType.AccountReactivationNotification:
+                        await _emailSenders.SendAccountReactivationNotificationEmail(message);
+                        break;
+                    case EmailType.AdminAccountReactivation:
+                        await _emailSenders.SendAdminRectivationNotificationEmail(message);
+                        break;
                 }
-           }
-           else
+            }
+            else
            {
                 _logger.LogWarning($"Message content came null");
            }

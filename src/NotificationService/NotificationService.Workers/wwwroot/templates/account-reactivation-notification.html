@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;background-color:#f5f7fa;">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Reactivation Successful - Kwik Nesta Inc.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .header {
+            background-color: #004aad;
+            padding: 20px;
+            text-align: center;
+        }
+
+            .header img {
+                max-height: 50px;
+            }
+
+        .content {
+            padding: 30px;
+        }
+
+        h1 {
+            color: #2a9d8f;
+            font-size: 22px;
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .footer {
+            background-color: #f5f7fa;
+            padding: 15px;
+            font-size: 12px;
+            text-align: center;
+            color: #888888;
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://res.cloudinary.com/dctevxse1/image/upload/v1755309471/lbllx0uwgmgqucq8h83u.png" alt="Kwik Nesta Inc. Logo">
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h1>Welcome Back 🎉</h1>
+            <p>Hello {{FirstName}},</p>
+            <p>You’ve successfully <strong>reactivated your account</strong> with <strong>Kwik Nesta Inc.</strong> after completing OTP verification.</p>
+            <p>Your access has been fully restored, and you can now continue using your account and all services without interruption.</p>
+            <p>If you didn’t request this reactivation or notice anything unusual, please contact our support team immediately at <a href="mailto:support@kwiknesta.com">support@kwiknesta.com</a>.</p>
+            <p>We’re glad to see you back with us!</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            &copy; {{Year}} Kwik Nesta Inc. All rights reserved.<br>
+            This is an automated email — please do not reply.
+        </div>
+    </div>
+</body>
+</html>

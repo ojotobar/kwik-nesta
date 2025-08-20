@@ -2,8 +2,10 @@
 using CrossQueue.Hub.Services.Interfaces;
 using CSharpTypes.Extensions.Date;
 using CSharpTypes.Extensions.Enumeration;
+using CSharpTypes.Extensions.Object;
 using CSharpTypes.Extensions.String;
 using EFCore.CrudKit.Library.Data.Interfaces;
+using FluentValidation;
 using IdentityService.Application.Extensions;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Application.Validations;
@@ -54,9 +56,9 @@ namespace IdentityService.Application.Services
                 return new NotFoundResponse("User not found");
             }
 
-            if (!user.EmailConfirmed || !user.IsActive)
+            if (!user.EmailConfirmed || user.Status != UserStatus.Active)
             {
-                return new ForbiddenResponse("You can't login at the moment. You have either not confirmed you email yet or your account is inactive");
+                return GetStatusResponse(user.Status);
             }
 
             var check = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
@@ -115,8 +117,8 @@ namespace IdentityService.Application.Services
             await _crudKit.InsertAsync(otpEntry);
 
             // Send activation email to user
-            (string Subject, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.AccountVerification);
-            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
+            var type = GetNotificationType(OtpType.AccountVerification);
+            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
                 routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             // Return to the user
@@ -125,6 +127,27 @@ namespace IdentityService.Application.Services
                 Email = user.Email,
                 Message = "Registration successful. Please check your mail for your activation code"
             });
+        }
+
+        public async Task<ApiBaseResponse> UpdateBasicDetails(UpdateUserBasicDetailsRequest request)
+        {
+            var validate = new UserBasicDetailsRequestValidator().Validate(request);
+            if (!validate.IsValid)
+            {
+                return new BadRequestResponse(validate.Errors.FirstOrDefault()?.ErrorMessage ?? "User details update failed");
+            }
+
+            var userId = GetLoggedInUserId();
+            var existingUser = await _userManager.FindByIdAsync(userId);
+            if (existingUser == null)
+            {
+                return new NotFoundResponse($"No user found");
+            }
+
+            existingUser = existingUser.Map(request);
+            await _userManager.UpdateAsync(existingUser);
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto("User details successfully updated."));
         }
 
         public async Task<ApiBaseResponse> ResendOtpAsync(OtpResendRequest request)
@@ -150,8 +173,8 @@ namespace IdentityService.Application.Services
             var otpEntry = user.Map(Hash, Salt, request.Type);
             await _crudKit.InsertAsync(otpEntry);
 
-            (string Subject, EmailType Type) = GetSubjectLineAndRoutingKey(request.Type);
-            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
+            var type = GetNotificationType(request.Type);
+            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
                 routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             if(existingOtp != null)
@@ -177,16 +200,16 @@ namespace IdentityService.Application.Services
 
             await _crudKit.InsertAsync(otpEntry);
 
-            (string Subject, EmailType Type) = GetSubjectLineAndRoutingKey(OtpType.ResetPassword);
-            await _pubSub.PublishAsync(user.Map(Subject, otp, otpEntry.ExpiresAt, Type),
+            var type = GetNotificationType(OtpType.ResetPassword);
+            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
                 routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Password reset request successful. Please enter the OTP sent to your email to complete the process"));
         }
 
-        public async Task<ApiBaseResponse> VerifyAccountAsync(AccountVerificationRequest request)
+        public async Task<ApiBaseResponse> VerifyAccountAsync(OtpVerificationRequest request)
         {
-            if(request == null || request.Email.IsNullOrEmpty() || request.Otp.IsNullOrEmpty())
+            if(!request.IsValid)
             {
                 return new BadRequestResponse($"Invalid request");
             }
@@ -198,7 +221,7 @@ namespace IdentityService.Application.Services
             }
 
             var otpEntry = await _crudKit
-                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.AccountVerification, false)
+                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.AccountVerification, true)
                 .OrderByDescending(o => o.ExpiresAt)
                 .FirstOrDefaultAsync();
 
@@ -217,7 +240,7 @@ namespace IdentityService.Application.Services
 
             user.EmailConfirmed = true;
             user.UpdatedAt = DateTime.UtcNow;
-            user.IsActive = true;
+            user.Status = UserStatus.Active;
             await _userManager.UpdateAsync(user);
 
             await _crudKit.DeleteAsync(otpEntry);
@@ -238,7 +261,7 @@ namespace IdentityService.Application.Services
             }
 
             var otpEntry = await _crudKit
-                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.ResetPassword, false)
+                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.ResetPassword, true)
                 .OrderByDescending(o => o.ExpiresAt)
                 .FirstOrDefaultAsync();
 
@@ -266,13 +289,8 @@ namespace IdentityService.Application.Services
             await _crudKit.DeleteAsync(otpEntry);
 
             // Notify the user.
-            await _pubSub.PublishAsync(new EmailNotification
-            {
-                EmailAddress = user.Email!,
-                ReceipientName = user.FirstName,
-                Type = EmailType.PasswordResetNotification,
-                Subject = "Password Change Notification - Kwik Nesta Inc.",
-            }, routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            await _pubSub.PublishAsync(user.Map(EmailType.PasswordResetNotification),
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto("Password successfully reset. Please login with your new password"));
         }
@@ -298,15 +316,177 @@ namespace IdentityService.Application.Services
             }
 
             // Notify the user.
-            await _pubSub.PublishAsync(new EmailNotification
-            {
-                EmailAddress = user.Email!,
-                ReceipientName = user.FirstName,
-                Type = EmailType.PasswordResetNotification,
-                Subject = "Password Change Notification - Kwik Nesta Inc.",
-            }, routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            await _pubSub.PublishAsync(user.Map(EmailType.PasswordResetNotification), 
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto("Password changed successfully. Please login with the new password"));
+        }
+
+        public async Task<ApiBaseResponse> SuspendUserAccountAsync(UserSuspensionRequest request)
+        {
+            var loggedInUserId = GetLoggedInUserId();
+            var loggedInUser = await _userManager.FindByIdAsync(loggedInUserId);
+            if(loggedInUser == null)
+            {
+                return new ForbiddenResponse("Access denied!!! You're not authorized to perform this action.");
+            }
+
+            var roles = (await _userManager.GetRolesAsync(loggedInUser))?.ToList();
+            if(roles == null || (!roles.Contains(SystemRoles.SuperAdmin.GetDescription()) && !roles.Contains(SystemRoles.Admin.GetDescription())))
+            {
+                return new ForbiddenResponse("Access denied!!! You're not authorized to perform this action.");
+            }
+
+            var userToUpdate = await _userManager.FindByIdAsync(request.UserId);
+            if(userToUpdate == null)
+            {
+                return new NotFoundResponse("User not found!");
+            }
+
+            userToUpdate.Status = UserStatus.Suspended;
+            userToUpdate.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(userToUpdate);
+
+            //Revoke refresh tokens
+            var tokens = await _crudKit.AsQueryable<RefreshToken>(rt => rt.UserId.Equals(userToUpdate.Id), true)
+                .ToListAsync();
+            if (tokens.Count != 0)
+            {
+                await _crudKit.DeleteRangeAsync(tokens);
+            }
+
+            // Notify the user.
+            await _pubSub.PublishAsync(userToUpdate.Map(EmailType.AccountSuspension, request.Reason),
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account successfully suspended."));
+        }
+
+        public async Task<ApiBaseResponse> LiftAccountSuspensionAsync(string userId)
+        {
+            var loggedInUserId = GetLoggedInUserId();
+            var loggedInUser = await _userManager.FindByIdAsync(loggedInUserId);
+            if (loggedInUser == null)
+            {
+                return new ForbiddenResponse("Access denied!!! You're not authorized to perform this action.");
+            }
+
+            var roles = (await _userManager.GetRolesAsync(loggedInUser))?.ToList();
+            if (roles == null || (!roles.Contains(SystemRoles.SuperAdmin.GetDescription()) && !roles.Contains(SystemRoles.Admin.GetDescription())))
+            {
+                return new ForbiddenResponse("Access denied!!! You're not authorized to perform this action.");
+            }
+
+            var userToUpdate = await _userManager.FindByIdAsync(userId);
+            if (userToUpdate == null)
+            {
+                return new NotFoundResponse("User not found!");
+            }
+
+            userToUpdate.Status = UserStatus.Active;
+            userToUpdate.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(userToUpdate);
+
+            // Notify the user.
+            await _pubSub.PublishAsync(userToUpdate.Map(EmailType.AdminAccountReactivation),
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account successfully reactivated."));
+        }
+
+        public async Task<ApiBaseResponse> DeactivateAccountAsync(string userId)
+        {
+            var loggedInUserId = GetLoggedInUserId();
+            if(string.IsNullOrWhiteSpace(loggedInUserId) || !loggedInUserId.Equals(userId))
+            {
+                return new ForbiddenResponse("Access denied!!! You're not authorized to perform this action.");
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return new NotFoundResponse("User not found!");
+            }
+
+            user.Status = UserStatus.Deactivated;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            //Revoke refresh tokens
+            var tokens = await _crudKit.AsQueryable<RefreshToken>(rt => rt.UserId.Equals(user.Id), true)
+                .ToListAsync();
+            if (tokens.Count != 0)
+            {
+                await _crudKit.DeleteRangeAsync(tokens);
+            }
+
+            // Notify the user.
+            await _pubSub.PublishAsync(user.Map(EmailType.AccountDeactivation),
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account successfully deactivated."));
+        }
+
+        public async Task<ApiBaseResponse> RequestAccountReactivationAsync(EmailPayload request)
+        {
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new NotFoundResponse("No user found with this email");
+            }
+
+            var otp = GenerateOtp();
+            var (Hash, Salt) = HashOtp(otp);
+            var otpEntry = user.Map(Hash, Salt, OtpType.AccountReactivation);
+
+            await _crudKit.InsertAsync(otpEntry);
+
+            var type = GetNotificationType(OtpType.AccountReactivation);
+            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account reactivation request successful. Please enter the OTP sent to your email to complete the process"));
+        }
+
+        public async Task<ApiBaseResponse> ReactivateAccountAsync(OtpVerificationRequest request)
+        {
+            if (!request.IsValid)
+            {
+                return new BadRequestResponse($"Invalid request");
+            }
+
+            var user = await _userManager.FindByEmailAsync(request.Email);
+            if (user == null)
+            {
+                return new NotFoundResponse($"No user found with the specified email address");
+            }
+
+            var otpEntry = await _crudKit
+                .AsQueryable<OtpEntry>(o => o.UserId.Equals(user.Id) && o.Type == OtpType.AccountReactivation, true)
+                .OrderByDescending(o => o.ExpiresAt)
+                .FirstOrDefaultAsync();
+
+            if (otpEntry == null)
+            {
+                return new NotFoundResponse($"No valid OTP found for this user");
+            }
+
+            bool isValid = VerifyOtp(request.Otp, otpEntry.OtpHash, otpEntry.OtpSalt)
+                          && otpEntry.ExpiresAt.IsLaterThan(DateTime.UtcNow);
+
+            if (!isValid)
+            {
+                return new ForbiddenResponse("OTP has expired. Please request for a new one.");
+            }
+
+            user.UpdatedAt = DateTime.UtcNow;
+            user.Status = UserStatus.Active;
+            await _userManager.UpdateAsync(user);
+
+            await _crudKit.DeleteAsync(otpEntry);
+            await _pubSub.PublishAsync(user.Map(EmailType.AccountReactivationNotification),
+                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto("Account successfully reactivated. Please proceed to login"));
         }
 
         public async Task<ApiBaseResponse> GetLoggedInUserLeanAsync()
@@ -364,6 +544,21 @@ namespace IdentityService.Application.Services
         }
 
         #region Private Methods
+        private ApiBaseResponse GetStatusResponse(UserStatus status)
+        {
+            return status switch
+            {
+                UserStatus.PendingVerification
+                    => new ForbiddenResponse("You can't login at the moment. Please confirm your email."),
+                UserStatus.Suspended
+                    => new ForbiddenResponse("Your account has been suspended. Please contact support."),
+                UserStatus.Deactivated
+                    => new ForbiddenResponse("Your account has been deactivated. Please contact reactivate or contact support"),
+                _ => throw new NotImplementedException()
+                    
+            };
+        }
+
         private string GetUserId()
         {
             ClaimsPrincipal? userClaim = _accessor.HttpContext?.User;
@@ -409,13 +604,14 @@ namespace IdentityService.Application.Services
             return computedHash == storedHash;
         }
 
-        private (string Subject, EmailType Type) GetSubjectLineAndRoutingKey(OtpType otpType)
+        private EmailType GetNotificationType(OtpType otpType)
         {
             return otpType switch
             {
-                OtpType.AccountVerification => ("Activate Your Account", EmailType.AccountActivation),
-                OtpType.ResetPassword => ("Reset Your Password", EmailType.PasswordReset),
-                _ => throw new NotImplementedException(),
+                OtpType.AccountVerification => EmailType.AccountActivation,
+                OtpType.ResetPassword => EmailType.PasswordReset,
+                OtpType.AccountReactivation => EmailType.AccountReactivation,
+                _ => throw new NotImplementedException()
             };
         }
         #endregion

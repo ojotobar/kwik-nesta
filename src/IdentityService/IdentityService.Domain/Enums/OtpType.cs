@@ -3,6 +3,7 @@
     public enum OtpType
     {
         AccountVerification,
-        ResetPassword
+        ResetPassword,
+        AccountReactivation
     }
 }

@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using IdentityService.Contracts.Requests;
-using IdentityService.Domain.Enums;
 
 namespace IdentityService.Application.Validations
 {

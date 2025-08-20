@@ -18,5 +18,10 @@ namespace IdentityService.Application.Validations
         {
             return password.ToLower().Equals(comparePassword.ToLower());
         }
+
+        internal static bool IsAValidStatusForUpdate(UserStatus status)
+        {
+            return status != UserStatus.PendingVerification;
+        }
     }
 }

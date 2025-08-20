@@ -1,0 +1,109 @@
+﻿<!DOCTYPE html>
+<html lang="en" style="margin:0;padding:0;background-color:#f5f7fa;">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Deactivation - Kwik Nesta Inc.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .header {
+            background-color: #004aad;
+            padding: 20px;
+            text-align: center;
+        }
+
+            .header img {
+                max-height: 50px;
+            }
+
+        .content {
+            padding: 30px;
+        }
+
+        h1 {
+            color: #004aad;
+            font-size: 22px;
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .alert-box {
+            display: inline-block;
+            background-color: #fff3f3;
+            color: #d93025;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border: 1px solid #f5c2c0;
+        }
+
+        .footer {
+            background-color: #f5f7fa;
+            padding: 15px;
+            font-size: 12px;
+            text-align: center;
+            color: #888888;
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://res.cloudinary.com/dctevxse1/image/upload/v1755309471/lbllx0uwgmgqucq8h83u.png" alt="Kwik Nesta Inc. Logo">
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h1>Account Deactivation Notice</h1>
+            <p>Hello {{FirstName}},</p>
+            <p>We’re writing to let you know that your <strong>Kwik Nesta Inc.</strong> account has been <span style="color:#d93025;font-weight:bold;">deactivated</span> on <strong>{{DeactivationDate}}</strong>.</p>
+
+            <div class="alert-box">
+                Your account is no longer accessible.
+            </div>
+
+            <p>
+                If this was intentional, no further action is required.
+                However, if you did not request this change, please contact our support team immediately at <a href="mailto:support@kwiknesta.com">support@kwiknesta.com</a>.
+            </p>
+
+            <p>Thank you for being part of Kwik Nesta Inc. 💙</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            &copy; {{Year}} Kwik Nesta Inc. All rights reserved.<br>
+            This is an automated email — please do not reply.
+        </div>
+    </div>
+</body>
+</html>

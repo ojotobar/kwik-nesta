@@ -40,5 +40,26 @@ namespace IdentityService.Api.Controllers.V1
 
             return Ok(result.GetResult<UserLeanDto>());
         }
+
+        /// <summary>
+        /// Updates user's basic details
+        /// </summary>
+        /// <returns></returns>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPut("update-basic")]
+        [Authorize]
+        public async Task<IActionResult> UpdateBasicDetails(UpdateUserBasicDetailsRequest request)
+        {
+            var result = await _service.User.UpdateBasicDetails(request);
+            if (!result.Success)
+            {
+                return ProcessError(result);
+            }
+
+            return Ok(result.GetResult<SuccessStringDto>());
+        }
     }
 }

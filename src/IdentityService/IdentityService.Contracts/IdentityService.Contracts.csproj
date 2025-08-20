@@ -5,7 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-
+	<ItemGroup>
+		<PackageReference Include="CSharpTypes.Extensions" Version="1.0.0" />
+	</ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IdentityService.Domain\IdentityService.Domain.csproj" />
   </ItemGroup>

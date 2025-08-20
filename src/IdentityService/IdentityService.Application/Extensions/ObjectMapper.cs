@@ -3,12 +3,23 @@ using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
 using IdentityService.Domain.Enums;
-using static System.Net.WebRequestMethods;
 
 namespace IdentityService.Application.Extensions
 {
     internal static class ObjectMapper
     {
+        public static EmailNotification Map(this AppUser user, EmailType emailType, SuspensionReasons? reason = null)
+        {
+            return new EmailNotification
+            {
+                EmailAddress = user.Email!,
+                ReceipientName = user.FirstName,
+                Type = emailType,
+                Subject = emailType.GetDescription(),
+                Reason = reason?.GetDescription()
+            };
+        }
+
         public static AppUser Map(this RegistrationRequest request)
         {
             return new AppUser
@@ -36,15 +47,14 @@ namespace IdentityService.Application.Extensions
             };
         }
 
-        public static EmailNotification Map(this AppUser user, string subject, 
-            string otp, DateTime expires, EmailType emailType = EmailType.AccountActivation)
+        public static EmailNotification Map(this AppUser user, string otp, DateTime expires, EmailType emailType = EmailType.AccountActivation)
         {
             return new EmailNotification
             {
                 EmailAddress = user.Email!,
                 ReceipientName = user.FirstName,
                 Type = emailType,
-                Subject = subject,
+                Subject = emailType.GetDescription(),
                 Otp = new OtpData
                 {
                     Value = otp,
@@ -63,9 +73,20 @@ namespace IdentityService.Application.Extensions
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 MiddleName = user.OtherName,
-                IsActive = user.IsActive,
+                Status = user.Status,
                 Gender = user.Gender.GetDescription()
             };
+        }
+
+        public static AppUser Map(this AppUser user, UpdateUserBasicDetailsRequest request)
+        {
+            user.FirstName = request.FirstName;
+            user.LastName = request.LastName;
+            user.OtherName = request.OtherName;
+            user.Gender = request.Gender;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            return user;
         }
     }
 }

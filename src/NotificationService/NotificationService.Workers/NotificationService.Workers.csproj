@@ -18,6 +18,11 @@
 	  <Content Include="wwwroot\**\*.*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="wwwroot\templates\account-deactivation.html" />
+    <None Remove="wwwroot\templates\account-reactivation-notification.html" />
+    <None Remove="wwwroot\templates\account-reactivation.html" />
+    <None Remove="wwwroot\templates\account-suspension.html" />
+    <None Remove="wwwroot\templates\admin-account-reactivation.html" />
     <None Remove="wwwroot\templates\password-reset-notification.html" />
   </ItemGroup>
 </Project>
