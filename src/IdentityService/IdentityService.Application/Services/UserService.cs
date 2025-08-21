@@ -345,6 +345,7 @@ namespace IdentityService.Application.Services
 
             userToUpdate.Status = UserStatus.Suspended;
             userToUpdate.UpdatedAt = DateTime.UtcNow;
+            userToUpdate.StatusChangedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(userToUpdate);
 
             //Revoke refresh tokens
@@ -385,6 +386,7 @@ namespace IdentityService.Application.Services
 
             userToUpdate.Status = UserStatus.Active;
             userToUpdate.UpdatedAt = DateTime.UtcNow;
+            userToUpdate.StatusChangedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(userToUpdate);
 
             // Notify the user.
@@ -410,6 +412,7 @@ namespace IdentityService.Application.Services
 
             user.Status = UserStatus.Deactivated;
             user.UpdatedAt = DateTime.UtcNow;
+            user.StatusChangedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
 
             //Revoke refresh tokens
@@ -481,6 +484,7 @@ namespace IdentityService.Application.Services
 
             user.UpdatedAt = DateTime.UtcNow;
             user.Status = UserStatus.Active;
+            user.StatusChangedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
 
             await _crudKit.DeleteAsync(otpEntry);

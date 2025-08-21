@@ -1,7 +1,9 @@
-﻿using EFCore.CrudKit.Library.Extensions;
+﻿using CSharpTypes.Extensions.Enumeration;
+using EFCore.CrudKit.Library.Extensions;
 using IdentityService.Application.Services;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Domain.Entities;
+using IdentityService.Domain.Enums;
 using IdentityService.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -10,6 +12,8 @@ using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Net.NetworkInformation;
+using System.Security.Claims;
 using System.Text;
 
 namespace IdentityService.Api.Extensions
@@ -71,6 +75,38 @@ namespace IdentityService.Api.Extensions
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.PrivateKey!))
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        if (context != null)
+                        {
+                            var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<AppUser>>();
+                            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                            if (string.IsNullOrEmpty(userId))
+                            {
+                                context.Fail("Forbidden: Invalid identifier");
+                                return;
+                            }
+
+                            var user = await userManager.FindByIdAsync(userId);
+                            if (user != null)
+                            {
+                                if (user.Status != UserStatus.Active && user.StatusChangedAt.HasValue && 
+                                user.StatusChangedAt.Value < DateTime.UtcNow)
+                                {
+                                    context.Fail($"Forbidden: Your account has been {user.Status.GetDescription()}");
+                                }
+                            }
+                            else
+                            {
+                                context.Fail("Forbidden: User not found");
+                            }
+                        }
+                    }
+                };
+
             });
             return services;
         }
