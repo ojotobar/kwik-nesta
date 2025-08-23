@@ -5,7 +5,6 @@ using CSharpTypes.Extensions.Enumeration;
 using CSharpTypes.Extensions.Object;
 using CSharpTypes.Extensions.String;
 using EFCore.CrudKit.Library.Data.Interfaces;
-using FluentValidation;
 using IdentityService.Application.Extensions;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Application.Validations;
@@ -21,7 +20,6 @@ using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace IdentityService.Application.Services
 {
