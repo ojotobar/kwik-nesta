@@ -1,8 +1,8 @@
 ﻿using CSharpTypes.Extensions.Object;
 using CSharpTypes.Extensions.String;
 using DRY.MailJetClient.Library;
-using NotificationService.Workers.Models;
-using NotificationService.Workers.Models.Enums;
+using KwikNesta.Contracts.Enums;
+using KwikNesta.Contracts.Models;
 using NotificationService.Workers.Services.Interfaces;
 
 namespace NotificationService.Workers.Services
@@ -21,7 +21,7 @@ namespace NotificationService.Workers.Services
             _templateRoot = Path.Combine(env.ContentRootPath, "wwwroot", "templates");
         }
 
-        public async Task SendAccountActivationEmail(EmailNotification notification)
+        public async Task SendAccountActivationEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -51,7 +51,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendPasswordResetEmail(EmailNotification notification)
+        public async Task SendPasswordResetEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -81,7 +81,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendPasswordResetNotificationEmail(EmailNotification notification)
+        public async Task SendPasswordResetNotificationEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -109,7 +109,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendAccountDeactivationEmail(EmailNotification notification)
+        public async Task SendAccountDeactivationEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -139,7 +139,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendAccountReactivationEmail(EmailNotification notification)
+        public async Task SendAccountReactivationEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -170,7 +170,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendAccountReactivationNotificationEmail(EmailNotification notification)
+        public async Task SendAccountReactivationNotificationEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -198,7 +198,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendAccountSuspensionEmail(EmailNotification notification)
+        public async Task SendAccountSuspensionEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -227,7 +227,7 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        public async Task SendAdminRectivationNotificationEmail(EmailNotification notification)
+        public async Task SendAdminRectivationNotificationEmail(NotificationMessage notification)
         {
             var valid = ValidatePayload(notification);
             if (!valid)
@@ -266,7 +266,7 @@ namespace NotificationService.Workers.Services
             return string.Empty;   
         }
 
-        private bool ValidatePayload(EmailNotification notification)
+        private bool ValidatePayload(NotificationMessage notification)
         {
             if (notification == null)
             {

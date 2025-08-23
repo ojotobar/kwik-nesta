@@ -1,5 +1,5 @@
-﻿using NotificationService.Workers.Models;
-using NotificationService.Workers.Models.Enums;
+﻿using KwikNesta.Contracts.Enums;
+using KwikNesta.Contracts.Models;
 using NotificationService.Workers.Services.Interfaces;
 
 namespace NotificationService.Workers.Handlers
@@ -16,7 +16,7 @@ namespace NotificationService.Workers.Handlers
             _logger = logger;
         }
 
-        public async Task HandleAsync(EmailNotification message)
+        public async Task HandleAsync(NotificationMessage message)
         {
            if(message != null)
            {

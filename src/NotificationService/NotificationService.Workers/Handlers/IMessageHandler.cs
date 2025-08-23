@@ -1,9 +1,9 @@
-﻿using NotificationService.Workers.Models;
+﻿using KwikNesta.Contracts.Models;
 
 namespace NotificationService.Workers.Handlers
 {
     public interface IMessageHandler
     {
-        Task HandleAsync(EmailNotification message);
+        Task HandleAsync(NotificationMessage message);
     }
 }
