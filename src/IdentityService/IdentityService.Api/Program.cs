@@ -1,9 +1,12 @@
 using CrossQueue.Hub.Shared.Extensions;
+using DiagnosKit.Core.Configurations;
 using DiagnosKit.Core.Extensions;
+using DiagnosKit.Core.Logging;
 using IdentityService.Api.Extensions;
 using IdentityService.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
+SerilogBootstrapper.UseBootstrapLogger();
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -22,6 +25,7 @@ builder.Services
     .ConfigureJwt(builder.Configuration)
     .AddLoggerManager();
 
+builder.Host.ConfigureSerilogESSink();
 builder.Services.AddAuthorization();
 
 var app = builder.Build();

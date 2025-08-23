@@ -1,5 +1,8 @@
+using DiagnosKit.Core.Configurations;
 using DiagnosKit.Core.Extensions;
+using DiagnosKit.Core.Logging;
 
+SerilogBootstrapper.UseBootstrapLogger();
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -8,6 +11,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Host.ConfigureSerilogESSink();
 
 var app = builder.Build();
 app.UseUnifiedErrorHandler();

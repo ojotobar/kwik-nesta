@@ -11,6 +11,7 @@ using IdentityService.Application.Services.Interfaces;
 using IdentityService.Application.Validations;
 using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
+using IdentityService.Contracts.Responses;
 using IdentityService.Domain.Entities;
 using IdentityService.Domain.Enums;
 using Microsoft.AspNetCore.Http;
@@ -211,13 +212,13 @@ namespace IdentityService.Application.Services
         {
             if(!request.IsValid)
             {
-                return new BadRequestResponse($"Invalid request");
+                return new BadRequestResponse(ResponseMessages.InvalidRequest);
             }
 
             var user = await _userManager.FindByEmailAsync(request.Email);
             if(user == null)
             {
-                return new NotFoundResponse($"No user found with the specified email address");
+                return new NotFoundResponse(ResponseMessages.UserNotFoundWithEmail);
             }
 
             var otpEntry = await _crudKit
@@ -227,7 +228,7 @@ namespace IdentityService.Application.Services
 
             if(otpEntry == null)
             {
-                return new NotFoundResponse($"No valid OTP found for this user");
+                return new NotFoundResponse(ResponseMessages.InvalidOTP);
             }
 
             bool isValid = VerifyOtp(request.Otp, otpEntry.OtpHash, otpEntry.OtpSalt)
@@ -235,7 +236,7 @@ namespace IdentityService.Application.Services
 
             if (!isValid)
             {
-                return new ForbiddenResponse("OTP has expired. Please request for a new one.");
+                return new ForbiddenResponse(ResponseMessages.OTPExpired);
             }
 
             user.EmailConfirmed = true;
@@ -427,7 +428,7 @@ namespace IdentityService.Application.Services
             await _pubSub.PublishAsync(user.Map(EmailType.AccountDeactivation),
                 routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
-            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account successfully deactivated."));
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto(ResponseMessages.AccountDeactivated));
         }
 
         public async Task<ApiBaseResponse> RequestAccountReactivationAsync(EmailPayload request)
@@ -435,7 +436,7 @@ namespace IdentityService.Application.Services
             var user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null)
             {
-                return new NotFoundResponse("No user found with this email");
+                return new NotFoundResponse(ResponseMessages.UserNotFoundWithEmail);
             }
 
             var otp = GenerateOtp();
@@ -448,20 +449,20 @@ namespace IdentityService.Application.Services
             await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
                 routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
 
-            return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account reactivation request successful. Please enter the OTP sent to your email to complete the process"));
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto(ResponseMessages.AccountReactivationRequested));
         }
 
         public async Task<ApiBaseResponse> ReactivateAccountAsync(OtpVerificationRequest request)
         {
             if (!request.IsValid)
             {
-                return new BadRequestResponse($"Invalid request");
+                return new BadRequestResponse(ResponseMessages.InvalidRequest);
             }
 
             var user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null)
             {
-                return new NotFoundResponse($"No user found with the specified email address");
+                return new NotFoundResponse(ResponseMessages.UserNotFoundWithEmail);
             }
 
             var otpEntry = await _crudKit
@@ -471,7 +472,7 @@ namespace IdentityService.Application.Services
 
             if (otpEntry == null)
             {
-                return new NotFoundResponse($"No valid OTP found for this user");
+                return new NotFoundResponse(ResponseMessages.InvalidOTP);
             }
 
             bool isValid = VerifyOtp(request.Otp, otpEntry.OtpHash, otpEntry.OtpSalt)
@@ -479,7 +480,7 @@ namespace IdentityService.Application.Services
 
             if (!isValid)
             {
-                return new ForbiddenResponse("OTP has expired. Please request for a new one.");
+                return new ForbiddenResponse(ResponseMessages.OTPExpired);
             }
 
             user.UpdatedAt = DateTime.UtcNow;
@@ -490,7 +491,7 @@ namespace IdentityService.Application.Services
             await _crudKit.DeleteAsync(otpEntry);
             await _pubSub.PublishAsync(user.Map(EmailType.AccountReactivationNotification),
                 routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
-            return new OkResponse<SuccessStringDto>(new SuccessStringDto("Account successfully reactivated. Please proceed to login"));
+            return new OkResponse<SuccessStringDto>(new SuccessStringDto(ResponseMessages.AccountReactivated));
         }
 
         public async Task<ApiBaseResponse> GetLoggedInUserLeanAsync()
@@ -515,7 +516,7 @@ namespace IdentityService.Application.Services
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
             {
-                return new NotFoundResponse($"No user information found");
+                return new NotFoundResponse(ResponseMessages.UserNotFoundWithId);
             }
 
             user.LastLogin = DateTime.UtcNow;
@@ -557,7 +558,7 @@ namespace IdentityService.Application.Services
                 UserStatus.Suspended
                     => new ForbiddenResponse("Your account has been suspended. Please contact support."),
                 UserStatus.Deactivated
-                    => new ForbiddenResponse("Your account has been deactivated. Please contact reactivate or contact support"),
+                    => new ForbiddenResponse("Your account has been deactivated. You can start the reactivation process or contact support"),
                 _ => throw new NotImplementedException()
                     
             };
