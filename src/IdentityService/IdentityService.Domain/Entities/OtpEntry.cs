@@ -1,5 +1,5 @@
 ﻿using EFCore.CrudKit.Library.Models;
-using IdentityService.Domain.Enums;
+using KwikNesta.Contracts.Enums;
 
 namespace IdentityService.Domain.Entities
 {

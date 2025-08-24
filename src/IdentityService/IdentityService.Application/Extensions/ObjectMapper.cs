@@ -3,14 +3,16 @@ using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
 using IdentityService.Domain.Enums;
+using KwikNesta.Contracts.Enums;
+using KwikNesta.Contracts.Models;
 
 namespace IdentityService.Application.Extensions
 {
     internal static class ObjectMapper
     {
-        public static EmailNotification Map(this AppUser user, EmailType emailType, SuspensionReasons? reason = null)
+        public static NotificationMessage Map(this AppUser user, EmailType emailType, SuspensionReasons? reason = null)
         {
-            return new EmailNotification
+            return new NotificationMessage
             {
                 EmailAddress = user.Email!,
                 ReceipientName = user.FirstName,
@@ -47,9 +49,9 @@ namespace IdentityService.Application.Extensions
             };
         }
 
-        public static EmailNotification Map(this AppUser user, string otp, DateTime expires, EmailType emailType = EmailType.AccountActivation)
+        public static NotificationMessage Map(this AppUser user, string otp, DateTime expires, EmailType emailType = EmailType.AccountActivation)
         {
-            return new EmailNotification
+            return new NotificationMessage
             {
                 EmailAddress = user.Email!,
                 ReceipientName = user.FirstName,

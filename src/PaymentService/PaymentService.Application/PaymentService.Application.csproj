@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-	<PackageReference Include="KwikNesta.Contracts.Core" Version="1.0.0" />
+	<PackageReference Include="KwikNesta.Contracts.Core" Version="1.1.0" />
   </ItemGroup>
 </Project>

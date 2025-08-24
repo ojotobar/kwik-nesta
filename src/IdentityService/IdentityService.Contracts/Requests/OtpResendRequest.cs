@@ -1,4 +1,4 @@
-﻿using IdentityService.Domain.Enums;
+﻿using KwikNesta.Contracts.Enums;
 
 namespace IdentityService.Contracts.Requests
 {

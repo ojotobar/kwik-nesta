@@ -2,6 +2,7 @@
 using CrossQueue.Hub.Services.Interfaces;
 using CSharpTypes.Extensions.Date;
 using CSharpTypes.Extensions.Enumeration;
+using CSharpTypes.Extensions.Guid;
 using CSharpTypes.Extensions.Object;
 using CSharpTypes.Extensions.String;
 using EFCore.CrudKit.Library.Data.Interfaces;
@@ -13,6 +14,9 @@ using IdentityService.Contracts.Requests;
 using IdentityService.Contracts.Responses;
 using IdentityService.Domain.Entities;
 using IdentityService.Domain.Enums;
+using KwikNesta.Contracts.Enums;
+using KwikNesta.Contracts.Extensions;
+using KwikNesta.Contracts.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -116,9 +120,9 @@ namespace IdentityService.Application.Services
             await _crudKit.InsertAsync(otpEntry);
 
             // Send activation email to user
-            var type = GetNotificationType(OtpType.AccountVerification);
-            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, user.FirstName,
+                otp, OtpType.AccountVerification.ToEmailType()),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             // Return to the user
             return new OkResponse<RegistrationDto>(new RegistrationDto
@@ -146,6 +150,11 @@ namespace IdentityService.Application.Services
             existingUser = existingUser.Map(request);
             await _userManager.UpdateAsync(existingUser);
 
+            // Log action
+            await _pubSub.PublishAsync(AuditLog.Initialize(existingUser.Id, existingUser.Id.ToGuid(),
+                AuditDomain.User, AuditAction.UpdatedProfile),
+                routingKey: MQRoutingKey.AuditTrails.GetDescription());
+
             return new OkResponse<SuccessStringDto>(new SuccessStringDto("User details successfully updated."));
         }
 
@@ -172,11 +181,12 @@ namespace IdentityService.Application.Services
             var otpEntry = user.Map(Hash, Salt, request.Type);
             await _crudKit.InsertAsync(otpEntry);
 
-            var type = GetNotificationType(request.Type);
-            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            // Send activation email to user
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, user.FirstName,
+                otp, request.Type.ToEmailType()),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
-            if(existingOtp != null)
+            if (existingOtp != null)
             {
                 await _crudKit.DeleteAsync(existingOtp);
             }
@@ -199,9 +209,10 @@ namespace IdentityService.Application.Services
 
             await _crudKit.InsertAsync(otpEntry);
 
-            var type = GetNotificationType(OtpType.ResetPassword);
-            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            // Send activation email to user
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, user.FirstName,
+                otp, OtpType.ResetPassword.ToEmailType()),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Password reset request successful. Please enter the OTP sent to your email to complete the process"));
         }
@@ -287,9 +298,10 @@ namespace IdentityService.Application.Services
             await _userManager.UpdateAsync(user);
             await _crudKit.DeleteAsync(otpEntry);
 
-            // Notify the user.
-            await _pubSub.PublishAsync(user.Map(EmailType.PasswordResetNotification),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            // Notify the user
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, user.FirstName, 
+                EmailType.PasswordResetNotification),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto("Password successfully reset. Please login with your new password"));
         }
@@ -314,9 +326,15 @@ namespace IdentityService.Application.Services
                 return new BadRequestResponse($"{result.Errors.FirstOrDefault()?.Description}");
             }
 
-            // Notify the user.
-            await _pubSub.PublishAsync(user.Map(EmailType.PasswordResetNotification), 
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            // Notify the user
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, user.FirstName, 
+                EmailType.PasswordResetNotification),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
+
+            // Log action
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, user.Id.ToGuid(),
+                AuditDomain.User, AuditAction.ChangedPassword),
+                routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto("Password changed successfully. Please login with the new password"));
         }
@@ -356,8 +374,14 @@ namespace IdentityService.Application.Services
             }
 
             // Notify the user.
-            await _pubSub.PublishAsync(userToUpdate.Map(EmailType.AccountSuspension, request.Reason),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(userToUpdate.Email!, userToUpdate.FirstName,
+                EmailType.AccountSuspension, request.Reason.GetDescription()),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
+
+            // Log action
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, userToUpdate.Id.ToGuid(),
+                AuditDomain.User, AuditAction.SuspendedAccount),
+                routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account successfully suspended."));
         }
@@ -389,8 +413,14 @@ namespace IdentityService.Application.Services
             await _userManager.UpdateAsync(userToUpdate);
 
             // Notify the user.
-            await _pubSub.PublishAsync(userToUpdate.Map(EmailType.AdminAccountReactivation),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(userToUpdate.Email!, 
+                userToUpdate.FirstName, EmailType.AdminAccountReactivation),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
+
+            // Log action
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, userToUpdate.Id.ToGuid(),
+                AuditDomain.User, AuditAction.ReactivatedAccount),
+                routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto($"Account successfully reactivated."));
         }
@@ -423,8 +453,14 @@ namespace IdentityService.Application.Services
             }
 
             // Notify the user.
-            await _pubSub.PublishAsync(user.Map(EmailType.AccountDeactivation),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, 
+                user.FirstName, EmailType.AccountDeactivation),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
+
+            // Log action
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, user.Id.ToGuid(),
+                AuditDomain.User, AuditAction.DeactivatedAccount),
+                routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto(ResponseMessages.AccountDeactivated));
         }
@@ -443,9 +479,10 @@ namespace IdentityService.Application.Services
 
             await _crudKit.InsertAsync(otpEntry);
 
-            var type = GetNotificationType(OtpType.AccountReactivation);
-            await _pubSub.PublishAsync(user.Map(otp, otpEntry.ExpiresAt, type),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            // Email the OTP to the user.
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, 
+                user.FirstName, OtpType.AccountReactivation.ToEmailType()),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             return new OkResponse<SuccessStringDto>(new SuccessStringDto(ResponseMessages.AccountReactivationRequested));
         }
@@ -486,9 +523,11 @@ namespace IdentityService.Application.Services
             user.StatusChangedAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
 
-            await _crudKit.DeleteAsync(otpEntry);
-            await _pubSub.PublishAsync(user.Map(EmailType.AccountReactivationNotification),
-                routingKey: RabbitMqRoutingKey.AccountEmail.GetDescription());
+            // Notify the user.
+            await _pubSub.PublishAsync(NotificationMessage.Initialize(user.Email!, 
+                user.FirstName, EmailType.AccountReactivationNotification),
+                routingKey: MQRoutingKey.AccountEmail.GetDescription());
+
             return new OkResponse<SuccessStringDto>(new SuccessStringDto(ResponseMessages.AccountReactivated));
         }
 
@@ -519,6 +558,11 @@ namespace IdentityService.Application.Services
 
             user.LastLogin = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
+
+            // Log action
+            await _pubSub.PublishAsync(AuditLog.Initialize(id, user.Id.ToGuid(), 
+                AuditDomain.User, AuditAction.LoogedIn), 
+                routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
             return new OkResponse<bool>(true);
         }
@@ -605,17 +649,6 @@ namespace IdentityService.Application.Services
 
             var computedHash = Convert.ToBase64String(hash);
             return computedHash == storedHash;
-        }
-
-        private EmailType GetNotificationType(OtpType otpType)
-        {
-            return otpType switch
-            {
-                OtpType.AccountVerification => EmailType.AccountActivation,
-                OtpType.ResetPassword => EmailType.PasswordReset,
-                OtpType.AccountReactivation => EmailType.AccountReactivation,
-                _ => throw new NotImplementedException()
-            };
         }
         #endregion
     }
