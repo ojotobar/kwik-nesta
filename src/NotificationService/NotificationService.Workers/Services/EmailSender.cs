@@ -29,7 +29,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate("account-activation");
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -59,7 +59,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate("password-reset");
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -89,7 +89,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate("password-reset-notification");
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -117,7 +117,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate(notification.Type.GetDescription());
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -147,7 +147,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate(notification.Type.GetDescription());
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -178,7 +178,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate(notification.Type.GetDescription());
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -206,7 +206,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate(notification.Type.GetDescription());
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -235,7 +235,7 @@ namespace NotificationService.Workers.Services
                 _logger.LogWarning("Invalid notification payload");
             }
 
-            var template = LoadTemplate(notification.Type.GetDescription());
+            var template = LoadTemplate(notification.Type);
             if (template.IsNullOrEmpty())
             {
                 _logger.LogWarning("The template returned an empty string");
@@ -255,9 +255,9 @@ namespace NotificationService.Workers.Services
             }
         }
 
-        private string LoadTemplate(string templateName)
+        private string LoadTemplate(EmailType templateType)
         {
-            var path = Path.Combine(_templateRoot, $"{templateName}.html");
+            var path = Path.Combine(_templateRoot, $"{GetTemplateName(templateType)}.html");
             if(File.Exists(path))
             {
                 return File.ReadAllText(path);
@@ -292,6 +292,22 @@ namespace NotificationService.Workers.Services
             }
 
             return true;
+        }
+
+        private string GetTemplateName(EmailType type)
+        {
+            return type switch
+            {
+                EmailType.AccountActivation => "account-activation",
+                EmailType.AccountDeactivation => "account-deactivation",
+                EmailType.AccountReactivation => "account-reactivation",
+                EmailType.AccountReactivationNotification => "account-reactivation-notification",
+                EmailType.AccountSuspension => "account-suspension",
+                EmailType.AdminAccountReactivation => "admin-account-reactivation",
+                EmailType.PasswordReset => "password-reset",
+                EmailType.PasswordResetNotification => "password-reset-notification",
+                _ => throw new NotImplementedException()
+            };
         }
     }
 }
