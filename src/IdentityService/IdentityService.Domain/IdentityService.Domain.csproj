@@ -9,6 +9,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.19" />
 	<PackageReference Include="EFCore.DataForge" Version="1.0.4" />
-	<PackageReference Include="KwikNesta.Contracts.Core" Version="1.1.0" />
+	<PackageReference Include="KwikNesta.Contracts.Core" Version="1.1.2" />
   </ItemGroup>
 </Project>

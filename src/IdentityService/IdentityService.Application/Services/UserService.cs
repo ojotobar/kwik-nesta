@@ -151,7 +151,7 @@ namespace IdentityService.Application.Services
             await _userManager.UpdateAsync(existingUser);
 
             // Log action
-            await _pubSub.PublishAsync(AuditLog.Initialize(existingUser.Id, existingUser.Id.ToGuid(),
+            await _pubSub.PublishAsync(AuditLog.Initialize(existingUser.Id, existingUser.Id, existingUser.Id.ToGuid(),
                 AuditDomain.User, AuditAction.UpdatedProfile),
                 routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
@@ -332,7 +332,7 @@ namespace IdentityService.Application.Services
                 routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             // Log action
-            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, user.Id.ToGuid(),
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, user.Id, user.Id.ToGuid(),
                 AuditDomain.User, AuditAction.ChangedPassword),
                 routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
@@ -379,7 +379,7 @@ namespace IdentityService.Application.Services
                 routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             // Log action
-            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, userToUpdate.Id.ToGuid(),
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, userToUpdate.Id, userToUpdate.Id.ToGuid(),
                 AuditDomain.User, AuditAction.SuspendedAccount),
                 routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
@@ -418,7 +418,7 @@ namespace IdentityService.Application.Services
                 routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             // Log action
-            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, userToUpdate.Id.ToGuid(),
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, userToUpdate.Id, userToUpdate.Id.ToGuid(),
                 AuditDomain.User, AuditAction.ReactivatedAccount),
                 routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
@@ -458,7 +458,7 @@ namespace IdentityService.Application.Services
                 routingKey: MQRoutingKey.AccountEmail.GetDescription());
 
             // Log action
-            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, user.Id.ToGuid(),
+            await _pubSub.PublishAsync(AuditLog.Initialize(loggedInUserId, user.Id, user.Id.ToGuid(),
                 AuditDomain.User, AuditAction.DeactivatedAccount),
                 routingKey: MQRoutingKey.AuditTrails.GetDescription());
 
@@ -560,7 +560,7 @@ namespace IdentityService.Application.Services
             await _userManager.UpdateAsync(user);
 
             // Log action
-            await _pubSub.PublishAsync(AuditLog.Initialize(id, user.Id.ToGuid(), 
+            await _pubSub.PublishAsync(AuditLog.Initialize(id, user.Id, user.Id.ToGuid(), 
                 AuditDomain.User, AuditAction.LoogedIn), 
                 routingKey: MQRoutingKey.AuditTrails.GetDescription());
 

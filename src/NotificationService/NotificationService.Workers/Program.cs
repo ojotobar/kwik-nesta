@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using NotificationService.Workers;
 using NotificationService.Workers.Handlers;
+using NotificationService.Workers.Models;
 using NotificationService.Workers.Services;
 using NotificationService.Workers.Services.Interfaces;
 
@@ -28,9 +29,9 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 
 var host = builder.Build();
 host.MapGet("/favicon.ico", () => Results.NoContent());
-host.MapGet("/audits", async (IAuditService service) =>
+host.MapGet("/audits", async (IAuditService service, [AsParameters] AuditQuery query) =>
 {
-    var audits = await service.GetAuditTrails();
+    var audits = await service.GetAuditTrails(query);
     return Results.Ok(audits);
 });
 host.Run();

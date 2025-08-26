@@ -29,7 +29,7 @@ namespace NotificationService.Workers
 
             _pubSub.Subscribe<AuditLog>(MQs.Audit.GetDescription(), async msg =>
             {
-                _logger.LogInfo("Received audit trail for action: {Action}", msg.Action);
+                _logger.LogInfo("Received audit trail for action: {Action}", msg.Action.GetDescription());
                 await _handler.HandleAsync(msg);
             }, routingKey: MQRoutingKey.AuditTrails.GetDescription());
 

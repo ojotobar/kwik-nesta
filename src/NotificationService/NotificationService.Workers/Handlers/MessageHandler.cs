@@ -1,4 +1,5 @@
-﻿using DiagnosKit.Core.Logging.Contracts;
+﻿using CSharpTypes.Extensions.Enumeration;
+using DiagnosKit.Core.Logging.Contracts;
 using EFCore.CrudKit.Library.Data.Interfaces;
 using KwikNesta.Contracts.Enums;
 using KwikNesta.Contracts.Models;
@@ -66,7 +67,7 @@ namespace NotificationService.Workers.Handlers
                 if (message != null)
                 {
                     await _mongoCrudKit.InsertAsync(message);
-                    _logger.LogInfo("Audit trail successfully added. Action Performed: {Action}", message.Action);
+                    _logger.LogInfo("Audit trail successfully added. Action Performed: {Action}", message.Action.GetDescription());
                 }
                 else
                 {
