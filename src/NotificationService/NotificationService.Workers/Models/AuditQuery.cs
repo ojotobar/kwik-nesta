@@ -12,6 +12,7 @@ namespace NotificationService.Workers.Models
         private DateTime _defaultStart = DateTime.MinValue;
         private DateTime _defaultEnd = DateTime.MaxValue;
 
+        public string? Search { get; set; }
         public int? Page
         {
             get => _page;

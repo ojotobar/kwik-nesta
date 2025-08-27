@@ -45,6 +45,7 @@ namespace NotificationService.Workers.Services
 
                 var users = await _data.FindAsync<UserLeanDto>(userQuery);
                 result = Utilities.QueryAuditData(audits, users)
+                    .Search(query.Search)
                     .Paginate(query!.Page!.Value, query!.PageSize!.Value);
 
                 return result;
