@@ -28,11 +28,11 @@ namespace IdentityService.Application.Services
             _config = config.Value;
         }
 
-        public string CreateAccessToken(AppUser user, string[] roles)
+        public string CreateAccessToken(AppUser user, string[] roles, string validAudience)
         {
             var claims = GetClaims(user, roles);
             var creds = GetSigningCredentials();
-            var jwt = GetJwtSecurityToken(claims, creds, DateTime.UtcNow);
+            var jwt = GetJwtSecurityToken(claims, creds, DateTime.UtcNow, validAudience);
 
             return new JwtSecurityTokenHandler().WriteToken(jwt);
         }
@@ -54,7 +54,7 @@ namespace IdentityService.Application.Services
             return token;
         }
 
-        public async Task<ApiBaseResponse> RefreshTokenAsync(RefreshTokenRequest request)
+        public async Task<ApiBaseResponse> RefreshTokenAsync(RefreshTokenRequest request, string validAudience)
         {
             if(request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
             {
@@ -76,7 +76,7 @@ namespace IdentityService.Application.Services
 
             // generate new tokens
             var roles = (await _userManager.GetRolesAsync(user)).ToArray();
-            var newAccessToken = CreateAccessToken(user, roles);
+            var newAccessToken = CreateAccessToken(user, roles, validAudience);
 
             return new OkResponse<(string AccessToken, string RefreshToken)>((newAccessToken, request.RefreshToken));
         }
@@ -131,36 +131,43 @@ namespace IdentityService.Application.Services
             return claims;
         }
 
-        private JwtSecurityToken GetJwtSecurityToken(List<Claim> claims, SigningCredentials creds, DateTime now)
+        private JwtSecurityToken GetJwtSecurityToken(List<Claim> claims, SigningCredentials creds, DateTime now, string audience)
         {
-            JwtSecurityToken jwt;
-
-            if (_config.Audience.Count == 1)
-            {
-                // one audience → use built-in
-                jwt = new JwtSecurityToken(
+            var jwt = new JwtSecurityToken(
                     issuer: _config.Issuer,
-                    audience: _config.Audience.First(),
+                    audience: audience,
                     claims: claims,
                     notBefore: now,
                     expires: now.AddHours(_config.Span),
                     signingCredentials: creds
-                );
-            }
-            else
-            {
-                // multiple audiences → aud must be array
-                jwt = new JwtSecurityToken(
-                    issuer: _config.Issuer,
-                    claims: claims,
-                    notBefore: now,
-                    expires: now.AddHours(_config.Span),
-                    signingCredentials: creds
-                );
+                ); ;
 
-                // manually override aud
-                jwt.Payload["aud"] = _config.Audience;
-            }
+            //if (_config.Audience.Count == 1)
+            //{
+            //    // one audience → use built-in
+            //    jwt = new JwtSecurityToken(
+            //        issuer: _config.Issuer,
+            //        audience: _audience,
+            //        claims: claims,
+            //        notBefore: now,
+            //        expires: now.AddHours(_config.Span),
+            //        signingCredentials: creds
+            //    );
+            //}
+            //else
+            //{
+            //    // multiple audiences → aud must be array
+            //    jwt = new JwtSecurityToken(
+            //        issuer: _config.Issuer,
+            //        claims: claims,
+            //        notBefore: now,
+            //        expires: now.AddHours(_config.Span),
+            //        signingCredentials: creds
+            //    );
+
+            //    // manually override aud
+            //    jwt.Payload["aud"] = _config.Audience;
+            //}
 
             return jwt;
         }

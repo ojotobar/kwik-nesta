@@ -68,7 +68,7 @@ namespace IdentityService.Api.Extensions
                     ValidIssuer = jwtOptions.Issuer!,
 
                     ValidateAudience = true,
-                    ValidAudiences = jwtOptions.Audience,
+                    ValidAudience = jwtOptions.Audience,
 
                     ValidateLifetime = true,
 

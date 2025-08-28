@@ -1,11 +1,13 @@
 ﻿using API.Common.Response.Model.ControllerHelpers;
 using API.Common.Response.Model.Extensions;
+using IdentityService.Api.Filters;
 using IdentityService.Application.Services.Interfaces;
 using IdentityService.Contracts.DTOs;
 using IdentityService.Contracts.Requests;
 using IdentityService.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace IdentityService.Api.Controllers.V1
 {
@@ -15,10 +17,12 @@ namespace IdentityService.Api.Controllers.V1
     public class AuthController : ApiControllerBase
     {
         private readonly IServiceManager _service;
+        private readonly IOptions<Jwt> _jwtOptions;
 
-        public AuthController(IServiceManager service)
+        public AuthController(IServiceManager service, IOptions<Jwt> jwtOptions)
         {
             _service = service;
+            _jwtOptions = jwtOptions;
         }
 
         /// <summary>
@@ -40,7 +44,7 @@ namespace IdentityService.Api.Controllers.V1
             }
 
             var result = validationResult.GetResult<(AppUser User, string[] Roles)>();
-            var accessToken = _service.Token.CreateAccessToken(result.User, result.Roles);
+            var accessToken = _service.Token.CreateAccessToken(result.User, result.Roles, _jwtOptions.Value.Audience);
             var refreshToken = await _service.Token.CreateAndSaveRefreshTokenAsync(result.User.Id);
             await _service.User.UpdateUserLastLogin(result.User.Id);
             return Ok(new LoginTokenDto
@@ -55,9 +59,10 @@ namespace IdentityService.Api.Controllers.V1
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpPut("refresh")]
         [Authorize]
-        public async Task<IActionResult> Refresh(RefreshTokenRequest request)
+        [RequireAudienceHeader]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, [FromHeader(Name = "Audience")] string audience)
         {
-            var baseResult = await _service.Token.RefreshTokenAsync(request);
+            var baseResult = await _service.Token.RefreshTokenAsync(request, audience);
             if (!baseResult.Success)
             {
                 return ProcessError(baseResult);

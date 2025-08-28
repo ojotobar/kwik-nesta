@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
 	<PackageReference Include="EFCore.DataForge" Version="2.1.4" />
     <PackageReference Include="KwikNesta.Contracts.Core" Version="1.1.2" />
+	<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.19" />
   </ItemGroup>
   <ItemGroup>
 	  <Content Include="wwwroot\**\*.*" CopyToOutputDirectory="PreserveNewest" />

@@ -6,5 +6,6 @@ namespace NotificationService.Workers.Services.Interfaces
     public interface IAuditService
     {
         Task<Paginator<AuditDto>> GetAuditTrails(AuditQuery query);
+        Task<UserLeanDto?> GetUserById(string id);
     }
 }

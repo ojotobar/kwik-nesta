@@ -53,5 +53,16 @@ namespace NotificationService.Workers.Services
 
             return result;
         }
+
+        public async Task<UserLeanDto?> GetUserById(string id)
+        {
+            var userQuery = new FluentQuery("SELECT Id, FirstName, LastName, Status")
+                    .From("AspNetUsers")
+                    .Where("Id = @id")
+                    .ToQuery();
+
+            var user = await _data.FindOneAsync<UserLeanDto>(userQuery, new { id = id });
+            return user;
+        }
     }
 }

@@ -2,3 +2,6 @@
 obj/
 bin/
 *.Development.json
+appsettings.Development.json
+/src/IdentityService/IdentityService.Api/appsettings.Development.json
+/src/IdentityService/IdentityService.Api/appsettings.Development.json
