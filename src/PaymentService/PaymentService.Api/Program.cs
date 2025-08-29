@@ -11,10 +11,13 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddDiagnosKitObservability(serviceName: builder.Environment.ApplicationName, serviceVersion: "1.0.0");
 builder.Host.ConfigureSerilogESSink();
 
 var app = builder.Build();
-app.UseUnifiedErrorHandler();
+app.UseDiagnosKitPrometheus()
+    .UseDiagnosKitErrorHandler()
+    .UseDiagnosKitLogEnricher();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

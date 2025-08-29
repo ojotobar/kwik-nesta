@@ -23,6 +23,7 @@ builder.Services
     .ConfigureApiVersioning()
     .AddCrossQueueHubRabbitMqBus(builder.Configuration)
     .ConfigureJwt(builder.Configuration)
+    .AddDiagnosKitObservability(serviceName: builder.Environment.ApplicationName, serviceVersion: "1.0.0")
     .AddLoggerManager();
 
 builder.Host.ConfigureSerilogESSink();
@@ -31,7 +32,10 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-app.UseUnifiedErrorHandler();
+app.UseDiagnosKitPrometheus()
+    .UseDiagnosKitErrorHandler()
+    .UseDiagnosKitLogEnricher();
+
 await app.SeedInitialData(logger);
 
 // Configure the HTTP request pipeline.
